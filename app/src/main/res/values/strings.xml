@@ -3,4 +3,9 @@
     <string name="app_name">Pin</string>
     <string name="main_tagline">Voice control for your phone</string>
     <string name="main_version">Version %1$s</string>
+    <string name="accessibility_service_label">Pin voice control</string>
+    <string name="accessibility_service_description">Lets Pin read the screen and tap, scroll and type for you when you give a voice command. Pin acts only during a listening session you start, asks before sensitive actions, and keeps what it sees on this phone.</string>
+    <string name="main_service_on">Accessibility service is on</string>
+    <string name="main_service_off">Accessibility service is off</string>
+    <string name="main_open_settings">Open accessibility settings</string>
 </resources>

@@ -1,0 +1,40 @@
+package io.github.jagadeeshm007.pin.debug
+
+import io.github.jagadeeshm007.pin.action.DeviceAction
+import io.github.jagadeeshm007.pin.action.Direction
+import io.github.jagadeeshm007.pin.action.GlobalNav
+import io.github.jagadeeshm007.pin.debug.DebugCommand.Kind
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
+
+class DebugCommandTest {
+    @Test
+    fun parsesEveryVerb() {
+        val cases = mapOf(
+            "dump" to DebugCommand.Dump,
+            "tap Search" to DebugCommand.OnLabel(Kind.TAP, "Search"),
+            "doubletap Photo" to DebugCommand.OnLabel(Kind.DOUBLE_TAP, "Photo"),
+            "longpress Chat with Sam" to DebugCommand.OnLabel(Kind.LONG_PRESS, "Chat with Sam"),
+            "type Search=Java tutorials" to DebugCommand.OnLabel(Kind.TYPE, "Search", "Java tutorials", false),
+            "typego Search=Java" to DebugCommand.OnLabel(Kind.TYPE, "Search", "Java", true),
+            "scroll down" to DebugCommand.Direct(DeviceAction.Scroll(Direction.DOWN)),
+            "swipe LEFT" to DebugCommand.Direct(DeviceAction.Swipe(Direction.LEFT)),
+            "pinch out" to DebugCommand.Direct(DeviceAction.Pinch(zoomIn = true)),
+            "pinch in" to DebugCommand.Direct(DeviceAction.Pinch(zoomIn = false)),
+            "open com.android.settings" to DebugCommand.Direct(DeviceAction.OpenApp("com.android.settings")),
+            "back" to DebugCommand.Direct(DeviceAction.Global(GlobalNav.BACK)),
+            "  home  " to DebugCommand.Direct(DeviceAction.Global(GlobalNav.HOME)),
+            "quicksettings" to DebugCommand.Direct(DeviceAction.Global(GlobalNav.QUICK_SETTINGS)),
+        )
+        cases.forEach { (line, expected) -> assertEquals(expected, DebugCommand.parse(line), "for '$line'") }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["", "fly", "tap", "type Search", "type =x", "scroll sideways", "pinch", "open"])
+    fun rejectsIncompleteCommands(line: String) {
+        assertNull(DebugCommand.parse(line))
+    }
+}
