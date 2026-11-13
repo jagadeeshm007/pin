@@ -33,8 +33,10 @@ class ActionVerifier {
 
     private fun typed(action: DeviceAction.TypeText, before: ScreenSnapshot, after: ScreenSnapshot): Verification {
         val textPresent = after.nodes.any { it.has(NodeFlag.EDITABLE) && it.text == action.text }
-        val movedOn =
-            action.submit && (after.windowTitle != before.windowTitle || after.packageName != before.packageName)
+        val windowChanged = after.windowTitle != before.windowTitle || after.packageName != before.packageName
+        val queryShown = after.contentVersion != before.contentVersion &&
+            after.nodes.any { it.label.equals(action.text, ignoreCase = true) || it.text == action.text }
+        val movedOn = action.submit && (windowChanged || queryShown)
         return when {
             textPresent || movedOn -> Verification.Passed
             action.submit -> Verification.Failed("typed text not found and the screen did not move on")

@@ -69,6 +69,37 @@ class ActionOrchestratorTest {
     }
 
     @Test
+    fun keepsWaitingWhileTheScreenIsStillChanging() = runTest {
+        // Found on the Nothing A059: the launcher emits events before the app appears.
+        val launcherBusy = Fixtures.screen(packageName = "com.nothing.launcher", contentVersion = 2)
+        val appShown = Fixtures.screen(packageName = "com.android.settings", contentVersion = 3)
+        screen.upcoming.addAll(listOf(launcherBusy, appShown))
+        val (orch, device) = orchestrator(mapOf(ExecutionStrategy.SYSTEM to (true to null)))
+        val result = orch.execute(DeviceAction.OpenApp("com.android.settings"))
+        assertEquals(ActionResult.Success(ExecutionStrategy.SYSTEM, appShown), result)
+        assertEquals(1, device.calls)
+    }
+
+    @Test
+    fun stopsWaitingOnceTheScreenGoesQuiet() = runTest {
+        val (orch, _) = orchestrator(mapOf(ExecutionStrategy.SYSTEM to (true to null)))
+        val result = orch.execute(DeviceAction.OpenApp("com.whatsapp"))
+        assertTrue(result is ActionResult.Failed)
+        assertEquals(1, screen.timeouts.size, "no change means one wait, not a loop")
+    }
+
+    @Test
+    fun appLaunchesGetALongerSettleTime() = runTest {
+        screen.upcoming.add(Fixtures.screen(packageName = "com.whatsapp", contentVersion = 2))
+        val (orch, _) = orchestrator(
+            mapOf(ExecutionStrategy.SYSTEM to (true to null), NODE_ACTION to (true to changed)),
+        )
+        orch.execute(DeviceAction.OpenApp("com.whatsapp"))
+        orch.execute(tapSearch)
+        assertTrue(screen.timeouts[0] > screen.timeouts[1], "launch ${screen.timeouts[0]} vs tap ${screen.timeouts[1]}")
+    }
+
+    @Test
     fun invalidActionNeverReachesTheDevice() = runTest {
         val (orch, device) = orchestrator(mapOf(NODE_ACTION to (true to changed)))
         val result = orch.execute(DeviceAction.TypeText(PASSWORD, "secret"))
