@@ -21,6 +21,8 @@ import io.github.jagadeeshm007.pin.core.AppVersion
 import io.github.jagadeeshm007.pin.databinding.ActivityMainBinding
 import io.github.jagadeeshm007.pin.device.DeviceProfileCollector
 import io.github.jagadeeshm007.pin.models.ModuleState
+import io.github.jagadeeshm007.pin.speech.ListenState
+import io.github.jagadeeshm007.pin.speech.SpeechEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -28,6 +30,11 @@ import kotlinx.coroutines.withContext
 
 /** Launcher screen: service status and version. Replaced by first-launch setup in PIN-20. */
 class MainActivity : AppCompatActivity() {
+    private val micPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) (application as PinApp).speech.start()
+        }
+
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* the notifier checks on post */ }
 
@@ -38,6 +45,7 @@ class MainActivity : AppCompatActivity() {
         val binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         bindModels(binding)
+        bindListening(binding)
         val info = packageManager.getPackageInfo(packageName, 0)
         binding.version.text =
             getString(R.string.main_version, AppVersion.label(info.versionName, info.longVersionCode))
@@ -92,6 +100,50 @@ class MainActivity : AppCompatActivity() {
                         },
                     )
                     binding.modelsMetered.visibility = if (isMetered()) View.VISIBLE else View.GONE
+                }
+            }
+        }
+    }
+
+    /** Listening card (PIN-21): start and stop the session; disabled until models are ready. */
+    private fun bindListening(binding: ActivityMainBinding) {
+        val app = application as PinApp
+        app.speech.connect()
+        binding.listenToggle.setOnClickListener {
+            val listening = app.speech.state.value.first.let { it != ListenState.STOPPED && it != ListenState.ERROR }
+            when {
+                listening -> app.speech.stop()
+
+                checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED ->
+                    app.speech.start()
+
+                else -> micPermission.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    app.speech.events.collect { e ->
+                        if (e is SpeechEvent.Final) {
+                            binding.listenHeard.text =
+                                getString(R.string.listening_heard, e.text)
+                        }
+                    }
+                }
+                combine(app.speech.state, app.models.states) { s, m -> s to m }.collect { (s, models) ->
+                    val (state, detail) = s
+                    val ready = models.values.all { it == ModuleState.Ready }
+                    binding.listenStatus.text = when {
+                        !ready -> getString(R.string.listening_needs_models)
+                        state == ListenState.LOADING -> getString(R.string.listening_state_loading)
+                        state == ListenState.LISTENING -> getString(R.string.listening_state_listening)
+                        state == ListenState.PAUSED -> getString(R.string.listening_state_paused, detail.orEmpty())
+                        state == ListenState.ERROR -> getString(R.string.listening_state_error, detail.orEmpty())
+                        else -> getString(R.string.listening_state_stopped)
+                    }
+                    val active = state != ListenState.STOPPED && state != ListenState.ERROR
+                    binding.listenToggle.setText(if (active) R.string.listening_stop else R.string.listening_start)
+                    binding.listenToggle.isEnabled = ready || active
                 }
             }
         }

@@ -52,7 +52,16 @@ class DebugCommandReceiver : BroadcastReceiver() {
         val pending = goAsync()
         scope.launch {
             val output = try {
-                withTimeout(TIMEOUT_MS) { runUntilStopped(line) }
+                withTimeout(TIMEOUT_MS) {
+                    if (line.startsWith(
+                            "say ",
+                        )
+                    ) {
+                        say(context.applicationContext, line.removePrefix("say "))
+                    } else {
+                        runUntilStopped(line)
+                    }
+                }
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 "error: timed out after $TIMEOUT_MS ms (${e.message})"
             }
@@ -259,6 +268,32 @@ class DebugCommandReceiver : BroadcastReceiver() {
             m.states.value.entries.joinToString("\n") { (id, state) -> "  $id: $state" }
     }
 
+    /** Speaks [text] through the phone speaker with system TTS so the microphone hears real speech. */
+    private suspend fun say(context: Context, text: String): String {
+        val ready = kotlinx.coroutines.CompletableDeferred<Int>()
+        val tts = android.speech.tts.TextToSpeech(context) { ready.complete(it) }
+        if (ready.await() != android.speech.tts.TextToSpeech.SUCCESS) return "say: TTS unavailable"
+        val done = kotlinx.coroutines.CompletableDeferred<Unit>()
+        tts.setOnUtteranceProgressListener(
+            object : android.speech.tts.UtteranceProgressListener() {
+                override fun onStart(id: String?) = Unit
+
+                override fun onDone(id: String?) {
+                    done.complete(Unit)
+                }
+
+                @Deprecated("Deprecated in Java")
+                override fun onError(id: String?) {
+                    done.complete(Unit)
+                }
+            },
+        )
+        tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "say")
+        kotlinx.coroutines.withTimeoutOrNull(SAY_TIMEOUT_MS) { done.await() }
+        tts.shutdown()
+        return "said: $text"
+    }
+
     private fun statusOf(r: ActionResult): String = when (r) {
         is ActionResult.Success -> "success"
         is ActionResult.Failed -> "failed"
@@ -318,6 +353,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_CMD = "cmd"
         const val TIMEOUT_MS = 30_000L
+        private const val SAY_TIMEOUT_MS = 10_000L
         private const val NANOS_PER_MS = 1_000_000L
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

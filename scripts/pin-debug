@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Sends one command to Pin's debug-build command receiver over adb and prints the reply.
+# Example: scripts/pin-debug dump | scripts/pin-debug "tap Search" | scripts/pin-debug models
+set -euo pipefail
+adb shell am broadcast \
+  -n io.github.jagadeeshm007.pin.debug/io.github.jagadeeshm007.pin.debug.DebugCommandReceiver \
+  -a io.github.jagadeeshm007.pin.debug.COMMAND --es cmd "'$*'" \
+  | sed -n 's/^Broadcast completed: result=0, data="\(.*\)/\1/p; /^Broadcast/!p' | sed 's/"$//'

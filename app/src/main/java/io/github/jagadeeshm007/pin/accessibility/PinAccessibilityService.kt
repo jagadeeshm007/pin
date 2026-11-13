@@ -7,6 +7,7 @@ import io.github.jagadeeshm007.pin.PinApp
 import io.github.jagadeeshm007.pin.device.DeviceProfileCollector
 import io.github.jagadeeshm007.pin.overlay.ConfirmCardController
 import io.github.jagadeeshm007.pin.overlay.OverlayController
+import io.github.jagadeeshm007.pin.speech.SpeechBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -43,6 +44,7 @@ class PinAccessibilityService : AccessibilityService() {
         scope.launch { broker.pending.collect { card.render(it) } }
         scope.launch { RetentionRunner.runWhileConnected(applicationContext as PinApp) }
         scope.launch { refreshProfile(applicationContext as PinApp) }
+        scope.launch { SpeechBridge(applicationContext as PinApp) { overlay }.run() }
         AccessibilityRegistry.attach(this)
     }
 

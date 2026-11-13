@@ -12,6 +12,7 @@ import io.github.jagadeeshm007.pin.models.ModelCatalog
 import io.github.jagadeeshm007.pin.models.ModelManager
 import io.github.jagadeeshm007.pin.notification.ConfirmationBroker
 import io.github.jagadeeshm007.pin.notification.TaskNotifier
+import io.github.jagadeeshm007.pin.speech.SpeechClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import java.io.File
@@ -52,8 +53,15 @@ class PinApp : Application() {
     lateinit var notifier: TaskNotifier
         private set
 
+    /** Link to the speech process (main process only). */
+    val speech: SpeechClient by lazy { SpeechClient(this) }
+
+    /** True in the `:speech` process, which needs none of the main-process setup (ADR-0007). */
+    val isSpeechProcess: Boolean get() = getProcessName().endsWith(":speech")
+
     override fun onCreate() {
         super.onCreate()
+        if (isSpeechProcess) return
         // Created at start so a confirmation always reaches the notification, even when
         // nothing has shown a status yet in this process (found on device, PIN-13).
         notifier = TaskNotifier(this, confirmations, mainScope)

@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.net.URI
+import java.security.MessageDigest
 
 plugins {
     alias(libs.plugins.android.application)
@@ -7,6 +9,44 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.android.junit)
     alias(libs.plugins.ktlint)
+}
+
+// sherpa-onnx (ADR-0003, ADR-0009): official release AAR, downloaded and hash-checked.
+val sherpaOnnxUrl =
+    "https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-static-link-onnxruntime-2.0.1.aar"
+val sherpaOnnxSha256 = "07e042d97f3a6bd5b7fe74d4eef0513dc01a714b16c15a903250095aba43a575"
+val sherpaOnnxAar = layout.buildDirectory.file("third-party/sherpa-onnx-static-link-onnxruntime-2.0.1.aar")
+
+val fetchSherpaOnnx by tasks.registering {
+    description = "Downloads the sherpa-onnx AAR and checks its SHA-256 (ADR-0009)."
+    val out = sherpaOnnxAar
+    val url = sherpaOnnxUrl
+    val expected = sherpaOnnxSha256
+    outputs.file(out)
+    doLast {
+        val file = out.get().asFile
+        fun sha256(f: File): String = MessageDigest.getInstance("SHA-256").let { md ->
+            f.inputStream().use { input ->
+                val buf = ByteArray(1 shl 16)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    md.update(buf, 0, n)
+                }
+            }
+            md.digest().joinToString("") { "%02x".format(it) }
+        }
+        if (file.exists() && sha256(file) == expected) return@doLast
+        file.parentFile.mkdirs()
+        val tmp = File(file.parentFile, file.name + ".tmp")
+        URI(url).toURL().openStream().use { input -> tmp.outputStream().use { input.copyTo(it) } }
+        val actual = sha256(tmp)
+        if (actual != expected) {
+            tmp.delete()
+            throw GradleException("sherpa-onnx AAR hash mismatch: expected $expected, got $actual")
+        }
+        tmp.renameTo(file)
+    }
 }
 
 // Release signing is wired only when the maintainer provides a keystore path;
@@ -80,6 +120,8 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // Native code compressed in the APK: 10.6 MB instead of 25.8 MB (PIN-2).
+        jniLibs.useLegacyPackaging = true
     }
 }
 
@@ -107,6 +149,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.material)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(files(sherpaOnnxAar).builtBy(fetchSherpaOnnx))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
