@@ -2,7 +2,7 @@
 
 Phases from the blueprint (section 16). Each line is one task id; each feature
 task goes through the lifecycle in `docs/sdlc/README.md`. Status: todo, spec,
-plan, build, verify, done.
+plan, build, verify, review, done.
 
 ## Phase 0: Spikes (findings in `docs/spikes/`)
 
