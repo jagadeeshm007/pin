@@ -41,4 +41,16 @@
     <string name="models_metered">You are on mobile data. Wi-Fi is recommended.</string>
     <string name="models_download">Download</string>
     <string name="models_retry">Retry</string>
+    <string name="listening_no_wake_word">Listening. No wake word yet: everything you say is treated as a command.</string>
+    <string name="listening_stop">Stop listening</string>
+    <string name="listening_start">Start listening</string>
+    <string name="listening_title">Listening</string>
+    <string name="listening_state_stopped">Not listening</string>
+    <string name="listening_state_loading">Loading voice models…</string>
+    <string name="listening_state_listening">Listening. Say a command.</string>
+    <string name="listening_state_paused">Paused: %1$s</string>
+    <string name="listening_state_error">Voice error: %1$s</string>
+    <string name="listening_needs_models">Download the voice models first.</string>
+    <string name="listening_needs_mic">Pin needs microphone access to listen.</string>
+    <string name="listening_heard">Heard: %1$s</string>
 </resources>
