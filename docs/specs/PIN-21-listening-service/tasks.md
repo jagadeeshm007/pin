@@ -7,4 +7,4 @@ Plan: ./plan.md
 - [x] T2 [P] [AC-7] Speech events and bundle mapping (test: `SpeechEventTest`)
 - [x] T3 [AC-1] [AC-5] [AC-7] Listening service in `:speech`
 - [x] T4 [AC-1] [AC-2] [AC-4] [AC-6] Main-process client, overlay, history, start and stop controls
-- [ ] T5 Device verification
+- [x] T5 Device verification (`verify.md`; notification Stop defect and AC-5 open)

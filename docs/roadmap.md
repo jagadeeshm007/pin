@@ -32,7 +32,7 @@ plan, build, verify, review, done.
 | Id | Task | Status |
 | --- | --- | --- |
 | PIN-20 | Module manager: pinned catalog, resumable verified downloads, first-launch setup card | review |
-| PIN-21 | Listening service and audio thread, mic loss handling | todo |
+| PIN-21 | Listening service and audio thread, mic loss handling | review |
 | PIN-22 | VAD gate and keyword spotting with user-chosen wake phrase | todo |
 | PIN-23 | Endpointing, pre-roll and barge-in stop on the Android recognizer (ADR-0010) | todo |
 | PIN-24 | TTS and earcons | todo |
