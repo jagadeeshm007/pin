@@ -4,6 +4,8 @@ import io.github.jagadeeshm007.pin.action.DeviceAction
 import io.github.jagadeeshm007.pin.action.Direction
 import io.github.jagadeeshm007.pin.action.GlobalNav
 import io.github.jagadeeshm007.pin.debug.DebugCommand.Kind
+import io.github.jagadeeshm007.pin.notification.TaskPhase
+import io.github.jagadeeshm007.pin.notification.TaskStatus
 import io.github.jagadeeshm007.pin.overlay.OverlayState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -47,6 +49,26 @@ class DebugCommandTest {
             "gridzoom 3" to DebugCommand.GridZoom(3),
         )
         cases.forEach { (line, expected) -> assertEquals(expected, DebugCommand.parse(line), "for '$line'") }
+    }
+
+    @Test
+    fun parsesNotificationCommands() {
+        val cases = mapOf(
+            "notify listening Say hey pin" to DebugCommand.Notify(TaskStatus(TaskPhase.LISTENING, "Say hey pin")),
+            "notify thinking" to DebugCommand.Notify(TaskStatus(TaskPhase.THINKING, "")),
+            "notify step 2 5 Tap Search" to DebugCommand.Notify(TaskStatus(TaskPhase.ACTING, "Tap Search", 2, 5)),
+            "notify done Playing video" to DebugCommand.Notify(TaskStatus(TaskPhase.DONE, "Playing video")),
+            "notify clear" to DebugCommand.NotifyClear,
+            "ask Delete the chat?" to DebugCommand.Ask("Delete the chat?"),
+            "answer" to DebugCommand.LastAnswer,
+        )
+        cases.forEach { (line, expected) -> assertEquals(expected, DebugCommand.parse(line), "for '$line'") }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["notify", "notify flying", "notify step 2", "notify step x 5 a", "ask"])
+    fun rejectsBadNotificationCommands(line: String) {
+        assertNull(DebugCommand.parse(line))
     }
 
     @ParameterizedTest

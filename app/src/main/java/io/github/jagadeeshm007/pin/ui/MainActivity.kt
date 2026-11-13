@@ -1,9 +1,13 @@
 package io.github.jagadeeshm007.pin.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -16,8 +20,12 @@ import kotlinx.coroutines.launch
 
 /** Launcher screen: service status and version. Replaced by first-launch setup in PIN-20. */
 class MainActivity : AppCompatActivity() {
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* the notifier checks on post */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestNotificationPermissionIfNeeded()
         val binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         val info = packageManager.getPackageInfo(packageName, 0)
@@ -35,5 +43,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        if (!granted) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }

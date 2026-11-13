@@ -3,16 +3,21 @@ package io.github.jagadeeshm007.pin.debug
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import io.github.jagadeeshm007.pin.PinApp
 import io.github.jagadeeshm007.pin.accessibility.AccessibilityDeviceController
 import io.github.jagadeeshm007.pin.accessibility.AccessibilityRegistry
 import io.github.jagadeeshm007.pin.accessibility.AccessibilityScreenSource
 import io.github.jagadeeshm007.pin.action.ActionEvent
 import io.github.jagadeeshm007.pin.action.ActionOrchestrator
+import io.github.jagadeeshm007.pin.action.ActionResult
 import io.github.jagadeeshm007.pin.action.DeviceAction
 import io.github.jagadeeshm007.pin.action.TargetRef
 import io.github.jagadeeshm007.pin.core.screen.NodeFlag
 import io.github.jagadeeshm007.pin.core.screen.ScreenNode
 import io.github.jagadeeshm007.pin.core.screen.ScreenSnapshot
+import io.github.jagadeeshm007.pin.notification.BrokerConfirmer
+import io.github.jagadeeshm007.pin.notification.TaskPhase
+import io.github.jagadeeshm007.pin.notification.TaskStatus
 import io.github.jagadeeshm007.pin.overlay.GridModel
 import io.github.jagadeeshm007.pin.overlay.NumberLabeler
 import io.github.jagadeeshm007.pin.overlay.OverlayState
@@ -26,7 +31,7 @@ import kotlinx.coroutines.withTimeout
 /**
  * Debug builds only. Runs one command through the real orchestrator so device
  * behaviour can be tested from adb before voice exists. Sensitive actions are always
- * declined here because there is no confirmation UI yet.
+ * answered through the task notification (no answer in 15 s means no).
  *
  * adb shell am broadcast -n io.github.jagadeeshm007.pin.debug/io.github.jagadeeshm007.pin.debug.DebugCommandReceiver \
  *   -a io.github.jagadeeshm007.pin.debug.COMMAND --es cmd "tap Search"
@@ -52,11 +57,14 @@ class DebugCommandReceiver : BroadcastReceiver() {
         val screen = AccessibilityScreenSource(service)
         val overlay = service.overlay ?: return "error: overlay not ready"
 
+        val app = service.applicationContext as PinApp
         val events = mutableListOf<ActionEvent>()
         val orchestrator = ActionOrchestrator(
             device = AccessibilityDeviceController(service),
             screen = screen,
-            confirmer = { _, _ -> false },
+            confirmer = BrokerConfirmer(app.confirmations) { reason ->
+                scope.launch(Dispatchers.Main) { overlay.showState(OverlayState.CONFIRM, reason) }
+            },
             recorder = { events += it },
         )
         val action: DeviceAction = when (command) {
@@ -108,16 +116,43 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 DeviceAction.Tap(TargetRef.Point(cell.center.first, cell.center.second))
             }
 
+            is DebugCommand.Notify -> return onMain {
+                app.notifier.show(command.status)
+                "notify: ${command.status} (promotion allowed: ${app.notifier.canPromote})"
+            }
+
+            DebugCommand.NotifyClear -> return onMain {
+                app.notifier.clear()
+                "notify: cleared"
+            }
+
+            is DebugCommand.Ask -> {
+                lastAnswer = "waiting"
+                scope.launch {
+                    lastAnswer = if (app.confirmations.request(command.question)) "confirmed" else "denied"
+                }
+                return "ask: '${command.question}' pending"
+            }
+
+            DebugCommand.LastAnswer -> return "answer: $lastAnswer"
+
             is DebugCommand.Direct -> command.action
 
             is DebugCommand.OnLabel -> resolve(command, screen.current())
                 ?: return "error: no node labelled '${command.label}'"
         }
-        onMain { overlay.showState(OverlayState.ACTING, action.javaClass.simpleName) }
+        onMain {
+            overlay.showState(OverlayState.ACTING, action.javaClass.simpleName)
+            app.notifier.show(TaskStatus(TaskPhase.ACTING, action.toString(), 1, 1))
+        }
         val started = System.nanoTime()
         val result = orchestrator.execute(action)
         val ms = (System.nanoTime() - started) / NANOS_PER_MS
-        onMain { overlay.showState(OverlayState.IDLE) }
+        onMain {
+            overlay.showState(OverlayState.IDLE)
+            val phase = if (result is ActionResult.Success) TaskPhase.DONE else TaskPhase.FAILED
+            app.notifier.show(TaskStatus(phase, describeResult(result), 1, 1))
+        }
         val trail = events.joinToString("\n") { "  ${describe(it)}" }
         return "action: $action\nresult: ${describeResult(result)}\nelapsed: $ms ms\nevents:\n$trail"
     }
@@ -160,17 +195,20 @@ class DebugCommandReceiver : BroadcastReceiver() {
         is ActionEvent.Declined -> "declined (debug receiver never confirms)"
     }
 
-    private fun describeResult(r: io.github.jagadeeshm007.pin.action.ActionResult): String = when (r) {
-        is io.github.jagadeeshm007.pin.action.ActionResult.Success -> "success via ${r.strategy}"
-        is io.github.jagadeeshm007.pin.action.ActionResult.Failed -> "failed: ${r.reasons.joinToString("; ")}"
-        is io.github.jagadeeshm007.pin.action.ActionResult.Rejected -> "rejected: ${r.reason}"
-        io.github.jagadeeshm007.pin.action.ActionResult.Declined -> "declined"
+    private fun describeResult(r: ActionResult): String = when (r) {
+        is ActionResult.Success -> "success via ${r.strategy}"
+        is ActionResult.Failed -> "failed: ${r.reasons.joinToString("; ")}"
+        is ActionResult.Rejected -> "rejected: ${r.reason}"
+        ActionResult.Declined -> "declined"
     }
 
     companion object {
         const val EXTRA_CMD = "cmd"
-        const val TIMEOUT_MS = 8_000L
+        const val TIMEOUT_MS = 30_000L
         private const val NANOS_PER_MS = 1_000_000L
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+        @Volatile
+        private var lastAnswer = "none"
     }
 }
