@@ -16,6 +16,12 @@ import io.github.jagadeeshm007.pin.R
 class OverlayView(context: Context) : View(context) {
     private val density = resources.displayMetrics.density
 
+    init {
+        // The overlay picks its own high-contrast colours; system force-dark inverted them
+        // on the Nothing A059 (Android 17).
+        isForceDarkAllowed = false
+    }
+
     private var pillText: String? = null
     private var pillKind = OverlayState.Kind.NEUTRAL
     private var numbers: NumberMap? = null
