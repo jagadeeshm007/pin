@@ -41,7 +41,7 @@ plan, build, verify, review, done.
 
 | Id | Task | Status |
 | --- | --- | --- |
-| PIN-30 | Command grammar and intent router with early commit | todo |
+| PIN-30 | Command grammar and intent router with early commit | in progress |
 | PIN-31 | Fuzzy target resolution and numbers fallback | todo |
 
 ## Phase 4: Agent
