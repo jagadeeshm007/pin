@@ -61,6 +61,16 @@ class SpeechClient(private val context: Context) {
             service = null
             _state.value = ListenState.STOPPED to "speech process ended"
         }
+
+        override fun onBindingDied(name: ComponentName?) {
+            // The service was destroyed (Stop, or its process died). This binding never
+            // reconnects, so the next start() must bind again (found on device, PIN-21).
+            Log.d(TAG, "binding died")
+            service = null
+            _state.value = ListenState.STOPPED to null
+            context.unbindService(this)
+            bound = false
+        }
     }
 
     /** Starts listening (call from a user action) and connects to the session. */
