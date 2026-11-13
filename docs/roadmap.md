@@ -24,7 +24,8 @@ plan, build, verify, review, done.
 | PIN-11 | Action registry and orchestrator with verification and cancellation | review |
 | PIN-12 | Overlay: states, numbers, grid | review |
 | PIN-13 | Task notification: Live Update with legacy fallback, persistent confirmation card | review |
-| PIN-14 | History store schema, file layout, retention job | todo |
+| PIN-14 | History store schema, file layout, retention job | build |
+| PIN-15 | Device profile on first launch: Android version and OEM skin, screen size and density, display cutouts (notch, punch-hole) and insets, navigation mode, gesture limits, RAM and CPU class, per-app quirks learned from fallbacks; used by gestures, overlay placement and the planner (maintainer request 2026-11-13) | todo |
 
 ## Phase 2: Voice
 
