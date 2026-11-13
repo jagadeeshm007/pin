@@ -53,7 +53,18 @@ sealed interface DebugCommand {
     /** Reports how the last [Ask] was answered. */
     data object LastAnswer : DebugCommand
 
+    /** Lists the [limit] most recent tasks from history. */
+    data class History(val limit: Int) : DebugCommand
+
+    /** Lists the steps of task [taskId]. */
+    data class Steps(val taskId: Long) : DebugCommand
+
+    /** Runs history retention now. */
+    data object Retention : DebugCommand
+
     companion object {
+        private const val DEFAULT_HISTORY = 10
+
         /** Parses one command line; returns null with nothing to run. */
         fun parse(line: String): DebugCommand? {
             val trimmed = line.trim()
@@ -81,6 +92,12 @@ sealed interface DebugCommand {
                 "ask" -> rest.takeIf { it.isNotEmpty() }?.let { Ask(it) }
 
                 "answer" -> LastAnswer
+
+                "history" -> if (rest.isEmpty()) History(DEFAULT_HISTORY) else rest.toIntOrNull()?.let { History(it) }
+
+                "steps" -> rest.toLongOrNull()?.let { Steps(it) }
+
+                "retention" -> Retention
 
                 "tap" -> label(Kind.TAP, rest)
 

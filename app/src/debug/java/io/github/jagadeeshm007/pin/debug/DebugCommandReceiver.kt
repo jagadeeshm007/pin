@@ -9,6 +9,7 @@ import io.github.jagadeeshm007.pin.accessibility.AccessibilityRegistry
 import io.github.jagadeeshm007.pin.accessibility.AccessibilityScreenSource
 import io.github.jagadeeshm007.pin.action.ActionEvent
 import io.github.jagadeeshm007.pin.action.ActionOrchestrator
+import io.github.jagadeeshm007.pin.action.ActionRecorder
 import io.github.jagadeeshm007.pin.action.ActionResult
 import io.github.jagadeeshm007.pin.action.DeviceAction
 import io.github.jagadeeshm007.pin.action.TargetRef
@@ -89,13 +90,17 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         val app = service.applicationContext as PinApp
         val events = mutableListOf<ActionEvent>()
+        var history: ActionRecorder? = null
         val orchestrator = ActionOrchestrator(
             device = AccessibilityDeviceController(service),
             screen = screen,
             confirmer = BrokerConfirmer(app.confirmations) { reason ->
                 scope.launch(Dispatchers.Main) { overlay.showState(OverlayState.CONFIRM, reason) }
             },
-            recorder = { events += it },
+            recorder = { event ->
+                events += event
+                history?.record(event)
+            },
         )
         val action: DeviceAction = when (command) {
             DebugCommand.Dump -> return dump(screen.current())
@@ -179,6 +184,19 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
             DebugCommand.LastAnswer -> return "answer: $lastAnswer"
 
+            is DebugCommand.History -> return app.history.recentTasks(command.limit).joinToString("\n") {
+                "task ${it.id} session ${it.sessionId} ${it.status} steps=${it.stepCount} '${it.utterance}'"
+            }.ifEmpty { "history: empty" }
+
+            is DebugCommand.Steps -> return app.history.steps(command.taskId).joinToString("\n") {
+                "${it.seq} ${it.kind} ${it.strategy ?: "-"} ${it.reason ?: ""} screen=${it.screenFile ?: "-"}"
+            }.ifEmpty { "steps: none for task ${command.taskId}" }
+
+            DebugCommand.Retention -> {
+                val deleted = app.history.applyRetention(app.retention)
+                return "retention: $deleted session(s) deleted, ${app.history.fileBytes()} bytes of snapshots kept"
+            }
+
             is DebugCommand.Direct -> command.action
 
             is DebugCommand.OnLabel -> resolve(command, screen.current())
@@ -188,8 +206,16 @@ class DebugCommandReceiver : BroadcastReceiver() {
             overlay.showState(OverlayState.ACTING, action.javaClass.simpleName)
             app.notifier.show(TaskStatus(TaskPhase.ACTING, action.toString(), 1, 1))
         }
+        val taskId = app.history.startTask(debugSession(app), line, "debug")
+        history = app.history.recorder(taskId)
         val started = System.nanoTime()
-        val result = orchestrator.execute(action)
+        val result = try {
+            orchestrator.execute(action)
+        } catch (e: CancellationException) {
+            withContext(NonCancellable) { app.history.endTask(taskId, "stopped", null) }
+            throw e
+        }
+        app.history.endTask(taskId, statusOf(result), describeResult(result))
         val ms = (System.nanoTime() - started) / NANOS_PER_MS
         onMain {
             overlay.showState(OverlayState.IDLE)
@@ -197,8 +223,19 @@ class DebugCommandReceiver : BroadcastReceiver() {
             app.notifier.show(TaskStatus(phase, describeResult(result), 1, 1))
         }
         val trail = events.joinToString("\n") { "  ${describe(it)}" }
-        return "action: $action\nresult: ${describeResult(result)}\nelapsed: $ms ms\nevents:\n$trail"
+        return "task: $taskId\naction: $action\nresult: ${describeResult(result)}\nelapsed: $ms ms\nevents:\n$trail"
     }
+
+    private fun statusOf(r: ActionResult): String = when (r) {
+        is ActionResult.Success -> "success"
+        is ActionResult.Failed -> "failed"
+        is ActionResult.Rejected -> "rejected"
+        ActionResult.Declined -> "declined"
+    }
+
+    /** One debug session per app process, so debug runs group together in history. */
+    private suspend fun debugSession(app: PinApp): Long =
+        debugSessionId ?: app.history.startSession("debug").also { debugSessionId = it }
 
     private suspend fun <T> onMain(block: () -> T): T = withContext(Dispatchers.Main) { block() }
 
@@ -253,5 +290,8 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         @Volatile
         private var lastAnswer = "none"
+
+        @Volatile
+        private var debugSessionId: Long? = null
     }
 }

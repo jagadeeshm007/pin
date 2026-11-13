@@ -47,7 +47,8 @@ dev: ## Install the debug build on the attached device
 
 test-device: ## Instrumented tests on the attached device (not part of check)
 	@[ "$$(adb devices | tail -n +2 | grep -c 'device$$')" -gt 0 ] || { echo "test-device: no device attached" >&2; exit 1; }
-	@$(GRADLEW) $(GRADLE_FLAGS) connectedDebugAndroidTest
+	@# Keep the app installed afterwards: uninstalling resets the accessibility switch and permissions.
+	@$(GRADLEW) $(GRADLE_FLAGS) connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true
 
 size: ## Release APK size against the budget
 	@$(GRADLEW) $(GRADLE_FLAGS) assembleRelease
