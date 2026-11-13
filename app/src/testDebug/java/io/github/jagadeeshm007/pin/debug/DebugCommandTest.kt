@@ -66,6 +66,15 @@ class DebugCommandTest {
     }
 
     @Test
+    fun parsesModelCommands() {
+        assertEquals(DebugCommand.Models(DebugCommand.ModelOp.STATUS), DebugCommand.parse("models"))
+        assertEquals(DebugCommand.Models(DebugCommand.ModelOp.DOWNLOAD), DebugCommand.parse("models download"))
+        assertEquals(DebugCommand.Models(DebugCommand.ModelOp.VERIFY), DebugCommand.parse("models verify"))
+        assertEquals(DebugCommand.Models(DebugCommand.ModelOp.WIPE), DebugCommand.parse("models wipe"))
+        assertNull(DebugCommand.parse("models explode"))
+    }
+
+    @Test
     fun parsesDeviceCommands() {
         assertEquals(DebugCommand.Profile, DebugCommand.parse("profile"))
         assertEquals(DebugCommand.Quirks, DebugCommand.parse("quirks"))
