@@ -4,6 +4,10 @@
      Backup is off: history, screenshots and keys never leave the device. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Task notification (PIN-13). Promoted Live Updates need the normal permission. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+
     <!-- Lets "open YouTube" resolve launchable apps (package visibility). -->
     <queries>
         <intent>
@@ -42,5 +46,9 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
+        <receiver
+            android:name=".notification.NotificationActionReceiver"
+            android:exported="false" />
     </application>
 </manifest>

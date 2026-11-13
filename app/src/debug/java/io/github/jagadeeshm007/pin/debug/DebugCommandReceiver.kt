@@ -3,30 +3,42 @@ package io.github.jagadeeshm007.pin.debug
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import io.github.jagadeeshm007.pin.PinApp
 import io.github.jagadeeshm007.pin.accessibility.AccessibilityDeviceController
 import io.github.jagadeeshm007.pin.accessibility.AccessibilityRegistry
 import io.github.jagadeeshm007.pin.accessibility.AccessibilityScreenSource
 import io.github.jagadeeshm007.pin.action.ActionEvent
 import io.github.jagadeeshm007.pin.action.ActionOrchestrator
+import io.github.jagadeeshm007.pin.action.ActionResult
 import io.github.jagadeeshm007.pin.action.DeviceAction
 import io.github.jagadeeshm007.pin.action.TargetRef
 import io.github.jagadeeshm007.pin.core.screen.NodeFlag
 import io.github.jagadeeshm007.pin.core.screen.ScreenNode
 import io.github.jagadeeshm007.pin.core.screen.ScreenSnapshot
+import io.github.jagadeeshm007.pin.notification.BrokerConfirmer
+import io.github.jagadeeshm007.pin.notification.TaskControl
+import io.github.jagadeeshm007.pin.notification.TaskPhase
+import io.github.jagadeeshm007.pin.notification.TaskStatus
 import io.github.jagadeeshm007.pin.overlay.GridModel
 import io.github.jagadeeshm007.pin.overlay.NumberLabeler
 import io.github.jagadeeshm007.pin.overlay.OverlayState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Debug builds only. Runs one command through the real orchestrator so device
  * behaviour can be tested from adb before voice exists. Sensitive actions are always
- * declined here because there is no confirmation UI yet.
+ * answered through the task notification (no answer in 15 s means no).
  *
  * adb shell am broadcast -n io.github.jagadeeshm007.pin.debug/io.github.jagadeeshm007.pin.debug.DebugCommandReceiver \
  *   -a io.github.jagadeeshm007.pin.debug.COMMAND --es cmd "tap Search"
@@ -37,12 +49,35 @@ class DebugCommandReceiver : BroadcastReceiver() {
         val pending = goAsync()
         scope.launch {
             val output = try {
-                withTimeout(TIMEOUT_MS) { run(line) }
+                withTimeout(TIMEOUT_MS) { runUntilStopped(line) }
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 "error: timed out after $TIMEOUT_MS ms (${e.message})"
             }
             pending.resultData = output
             pending.finish()
+        }
+    }
+
+    /** Runs [line], cancelling it when the notification's Stop is pressed. */
+    private suspend fun runUntilStopped(line: String): String = coroutineScope {
+        val work = async { run(line) }
+        val stop = launch {
+            TaskControl.stopRequests.first()
+            work.cancel()
+        }
+        try {
+            work.await()
+        } catch (e: CancellationException) {
+            if (!isActive) throw e
+            withContext(NonCancellable + Dispatchers.Main) {
+                (AccessibilityRegistry.service.value?.applicationContext as? PinApp)?.notifier?.show(
+                    TaskStatus(TaskPhase.FAILED, "Stopped by user"),
+                )
+                AccessibilityRegistry.service.value?.overlay?.showState(OverlayState.IDLE)
+            }
+            "stopped: Stop pressed in the notification"
+        } finally {
+            stop.cancel()
         }
     }
 
@@ -52,11 +87,14 @@ class DebugCommandReceiver : BroadcastReceiver() {
         val screen = AccessibilityScreenSource(service)
         val overlay = service.overlay ?: return "error: overlay not ready"
 
+        val app = service.applicationContext as PinApp
         val events = mutableListOf<ActionEvent>()
         val orchestrator = ActionOrchestrator(
             device = AccessibilityDeviceController(service),
             screen = screen,
-            confirmer = { _, _ -> false },
+            confirmer = BrokerConfirmer(app.confirmations) { reason ->
+                scope.launch(Dispatchers.Main) { overlay.showState(OverlayState.CONFIRM, reason) }
+            },
             recorder = { events += it },
         )
         val action: DeviceAction = when (command) {
@@ -108,16 +146,56 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 DeviceAction.Tap(TargetRef.Point(cell.center.first, cell.center.second))
             }
 
+            is DebugCommand.Notify -> return onMain {
+                app.notifier.show(command.status)
+                "notify: ${command.status} (promotion allowed: ${app.notifier.canPromote})"
+            }
+
+            DebugCommand.NotifyClear -> return onMain {
+                app.notifier.clear()
+                "notify: cleared"
+            }
+
+            is DebugCommand.Ask -> {
+                lastAnswer = "waiting"
+                scope.launch {
+                    // Broadcasts reach this receiver one at a time, so Stop is tested on a
+                    // pending question rather than on a blocking command.
+                    val question = async { app.confirmations.request(command.question) }
+                    val watcher = launch {
+                        TaskControl.stopRequests.first()
+                        question.cancel()
+                    }
+                    lastAnswer = try {
+                        if (question.await()) "confirmed" else "denied"
+                    } catch (e: CancellationException) {
+                        "stopped"
+                    } finally {
+                        watcher.cancel()
+                    }
+                }
+                return "ask: '${command.question}' pending"
+            }
+
+            DebugCommand.LastAnswer -> return "answer: $lastAnswer"
+
             is DebugCommand.Direct -> command.action
 
             is DebugCommand.OnLabel -> resolve(command, screen.current())
                 ?: return "error: no node labelled '${command.label}'"
         }
-        onMain { overlay.showState(OverlayState.ACTING, action.javaClass.simpleName) }
+        onMain {
+            overlay.showState(OverlayState.ACTING, action.javaClass.simpleName)
+            app.notifier.show(TaskStatus(TaskPhase.ACTING, action.toString(), 1, 1))
+        }
         val started = System.nanoTime()
         val result = orchestrator.execute(action)
         val ms = (System.nanoTime() - started) / NANOS_PER_MS
-        onMain { overlay.showState(OverlayState.IDLE) }
+        onMain {
+            overlay.showState(OverlayState.IDLE)
+            val phase = if (result is ActionResult.Success) TaskPhase.DONE else TaskPhase.FAILED
+            app.notifier.show(TaskStatus(phase, describeResult(result), 1, 1))
+        }
         val trail = events.joinToString("\n") { "  ${describe(it)}" }
         return "action: $action\nresult: ${describeResult(result)}\nelapsed: $ms ms\nevents:\n$trail"
     }
@@ -157,20 +235,23 @@ class DebugCommandReceiver : BroadcastReceiver() {
         is ActionEvent.Succeeded -> "succeeded with ${e.strategy}"
         is ActionEvent.Rejected -> "rejected: ${e.reason}"
         is ActionEvent.ConfirmationRequested -> "confirmation requested: ${e.reason}"
-        is ActionEvent.Declined -> "declined (debug receiver never confirms)"
+        is ActionEvent.Declined -> "declined, or no answer in time"
     }
 
-    private fun describeResult(r: io.github.jagadeeshm007.pin.action.ActionResult): String = when (r) {
-        is io.github.jagadeeshm007.pin.action.ActionResult.Success -> "success via ${r.strategy}"
-        is io.github.jagadeeshm007.pin.action.ActionResult.Failed -> "failed: ${r.reasons.joinToString("; ")}"
-        is io.github.jagadeeshm007.pin.action.ActionResult.Rejected -> "rejected: ${r.reason}"
-        io.github.jagadeeshm007.pin.action.ActionResult.Declined -> "declined"
+    private fun describeResult(r: ActionResult): String = when (r) {
+        is ActionResult.Success -> "success via ${r.strategy}"
+        is ActionResult.Failed -> "failed: ${r.reasons.joinToString("; ")}"
+        is ActionResult.Rejected -> "rejected: ${r.reason}"
+        ActionResult.Declined -> "declined"
     }
 
     companion object {
         const val EXTRA_CMD = "cmd"
-        const val TIMEOUT_MS = 8_000L
+        const val TIMEOUT_MS = 30_000L
         private const val NANOS_PER_MS = 1_000_000L
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+        @Volatile
+        private var lastAnswer = "none"
     }
 }
