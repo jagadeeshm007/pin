@@ -16,6 +16,7 @@ import io.github.jagadeeshm007.pin.action.TargetRef
 import io.github.jagadeeshm007.pin.core.screen.NodeFlag
 import io.github.jagadeeshm007.pin.core.screen.ScreenNode
 import io.github.jagadeeshm007.pin.core.screen.ScreenSnapshot
+import io.github.jagadeeshm007.pin.device.QuirkObserver
 import io.github.jagadeeshm007.pin.notification.BrokerConfirmer
 import io.github.jagadeeshm007.pin.notification.TaskControl
 import io.github.jagadeeshm007.pin.notification.TaskPhase
@@ -90,6 +91,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         val app = service.applicationContext as PinApp
         val events = mutableListOf<ActionEvent>()
+        val quirkObserver = QuirkObserver(app.quirks)
         var history: ActionRecorder? = null
         val orchestrator = ActionOrchestrator(
             device = AccessibilityDeviceController(service),
@@ -100,6 +102,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
             recorder = { event ->
                 events += event
                 history?.record(event)
+                quirkObserver.record(event)
             },
         )
         val action: DeviceAction = when (command) {
@@ -192,6 +195,12 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 "${it.seq} ${it.kind} ${it.strategy ?: "-"} ${it.reason ?: ""} screen=${it.screenFile ?: "-"}"
             }.ifEmpty { "steps: none for task ${command.taskId}" }
 
+            DebugCommand.Profile -> return app.profiles.loadProfile()?.toJson() ?: "profile: not collected yet"
+
+            DebugCommand.Quirks -> return app.quirks.all().entries.joinToString("\n") { (k, v) ->
+                "$k node_ok=${v.nodeOk} gesture_rescued=${v.gestureRescued}"
+            }.ifEmpty { "quirks: none yet" }
+
             DebugCommand.Retention -> {
                 val deleted = app.history.applyRetention(app.retention)
                 return "retention: $deleted session(s) deleted, ${app.history.fileBytes()} bytes of snapshots kept"
@@ -216,6 +225,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
             throw e
         }
         app.history.endTask(taskId, statusOf(result), describeResult(result))
+        app.profiles.saveQuirks(app.quirks)
         val ms = (System.nanoTime() - started) / NANOS_PER_MS
         onMain {
             overlay.showState(OverlayState.IDLE)

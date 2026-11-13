@@ -66,6 +66,12 @@ class DebugCommandTest {
     }
 
     @Test
+    fun parsesDeviceCommands() {
+        assertEquals(DebugCommand.Profile, DebugCommand.parse("profile"))
+        assertEquals(DebugCommand.Quirks, DebugCommand.parse("quirks"))
+    }
+
+    @Test
     fun parsesHistoryCommands() {
         assertEquals(DebugCommand.History(10), DebugCommand.parse("history"))
         assertEquals(DebugCommand.History(3), DebugCommand.parse("history 3"))

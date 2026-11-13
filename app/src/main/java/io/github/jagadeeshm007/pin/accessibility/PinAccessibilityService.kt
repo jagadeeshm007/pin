@@ -4,8 +4,10 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import io.github.jagadeeshm007.pin.PinApp
+import io.github.jagadeeshm007.pin.device.DeviceProfileCollector
 import io.github.jagadeeshm007.pin.overlay.ConfirmCardController
 import io.github.jagadeeshm007.pin.overlay.OverlayController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Pin's accessibility service. Event handling only bumps [contentVersion] so the
@@ -39,6 +42,7 @@ class PinAccessibilityService : AccessibilityService() {
         val card = ConfirmCardController(this, broker).also { confirmCard = it }
         scope.launch { broker.pending.collect { card.render(it) } }
         scope.launch { RetentionRunner.runWhileConnected(applicationContext as PinApp) }
+        scope.launch { refreshProfile(applicationContext as PinApp) }
         AccessibilityRegistry.attach(this)
     }
 
@@ -56,6 +60,14 @@ class PinAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         disconnect()
         super.onDestroy()
+    }
+
+    /** Collects the device profile and loads quirks (PIN-15). */
+    private suspend fun refreshProfile(app: PinApp) {
+        val profile =
+            withContext(Dispatchers.Default) { DeviceProfileCollector(this@PinAccessibilityService).collect() }
+        app.profiles.saveProfile(profile)
+        app.quirks = app.profiles.loadQuirks()
     }
 
     private fun disconnect() {
