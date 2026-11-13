@@ -71,3 +71,27 @@ plan, build, verify, review, done.
 | Id | Task | Status |
 | --- | --- | --- |
 | PIN-60 | Reproducible signed release, GitHub Releases, contributor docs | todo |
+
+## Phase 7: Pin as a device agent (direction set 2026-11-14, after Phase 6)
+
+Maintainer direction: Pin should work like a coding agent does for a repository, but for
+the phone. Each row becomes a spec with its own ADR before any code. Order is a first
+guess. Detail: `docs/architecture/direction-phase-7.md`.
+
+| Id | Task | Status |
+| --- | --- | --- |
+| PIN-70 | Think, plan, act, re-plan loop: explicit plan steps, stuck and error detection, re-plan with the failure attached, bounded retries | todo |
+| PIN-71 | Long-running tasks: "keep scrolling reels until I say stop", pacing rules per app, pause on screen-off and calls, stop word wins | todo |
+| PIN-72 | Data-loss guardrails: a deny list of destructive targets (reset, delete, format, uninstall, factory reset, sign out) that no route may trigger, on top of the confirmation gate | todo |
+| PIN-73 | Visible hand: an overlay cursor that shows tapping, holding, dragging and scrolling before and while Pin acts | todo |
+| PIN-74 | Tool registry: typed, permissioned tools beyond the screen (files and media read and write, contacts, SMS and calls, app intents, share sheets), each a separate runtime permission the user grants | todo |
+| PIN-75 | Safe script runner: the planner composes tools into a small sandboxed script (no arbitrary code, no network, time and step budgets, dry-run shown to the user for anything that writes or sends) | todo |
+| PIN-76 | User memory: remembered preferences, routines and app habits, stored locally, visible and editable, with the same retention controls as history | todo |
+
+## Phase 8: Google and connectivity (after Phase 7)
+
+| Id | Task | Status |
+| --- | --- | --- |
+| PIN-80 | Google account sign-in with per-scope consent (the user's own OAuth client; no key ships) | todo |
+| PIN-81 | Google tools: Calendar, Gmail, Tasks, Keep, Drive, Contacts behind the Phase 7 tool registry | todo |
+| PIN-82 | Connectivity tools: Wi-Fi connect (suggestion and panel APIs), Bluetooth pairing and handoff within what Android allows apps | todo |
