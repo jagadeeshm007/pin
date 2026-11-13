@@ -19,7 +19,8 @@ streaming Zipformer was removed after device tests.
 
 The FGS notification is posted by the speech process with the shared channel and ID 1,
 so the existing notification becomes the session notification. The main process keeps
-updating it.
+updating it; while a session runs, its task notifications keep a Stop listening action and
+stay ongoing (found in verification, see verify.md).
 
 ## Test strategy
 

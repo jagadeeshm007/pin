@@ -31,6 +31,7 @@ is a Live Update; older versions get a standard progress notification.
 - AC-3: WHEN updates arrive faster than every 500 ms THE notifier SHALL post at most one per 500 ms, always ending with the latest status; CONFIRM, DONE and FAILED SHALL post immediately.
 - AC-4: WHEN a sensitive action needs confirmation THE notification SHALL show Confirm and Deny; THE answer SHALL resolve the pending request; no answer within the timeout SHALL count as deny.
 - AC-5: WHEN Stop is tapped THE stop signal SHALL be emitted.
+- Amended 2026-11-14 (PIN-21): WHILE a voice session runs THE notification SHALL also carry Stop listening and stay ongoing after a task ends; Confirm, Deny and Stop stay the three actions during a question.
 - AC-6: Action intents SHALL be explicit, immutable and delivered to a non-exported receiver.
 - AC-7 (added 2026-11-13, maintainer request): WHILE a confirmation is pending THE app SHALL show a card in its own overlay with the question and Confirm, Deny and Stop, which stays until answered, stopped or timed out; touches outside the card SHALL reach the app underneath. Reason: system pop-ups close after a few seconds and only appear for high-importance channels.
 
