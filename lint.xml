@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android lint configuration. abortOnError is on, so any issue marked error
+     fails make check. Never demote an issue to make a build pass; no baseline. -->
+<lint>
+    <issue id="HardcodedText" severity="error" />
+    <issue id="MissingTranslation" severity="error" />
+    <issue id="ExportedReceiver" severity="error" />
+    <issue id="ExportedService" severity="error" />
+    <issue id="ExportedContentProvider" severity="error" />
+    <issue id="AllowBackup" severity="error" />
+    <issue id="TrustAllX509TrustManager" severity="error" />
+    <issue id="BadHostnameVerifier" severity="error" />
+    <issue id="UnsafeIntentLaunch" severity="error" />
+
+    <issue id="ObsoleteLintCustomCheck" severity="ignore" />
+    <issue id="GradleDependency" severity="warning" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+
+    <issue id="all">
+        <ignore path="build" />
+        <ignore path="**/generated/**" />
+    </issue>
+</lint>

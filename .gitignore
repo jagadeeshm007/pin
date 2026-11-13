@@ -1,0 +1,23 @@
+# Android and Gradle
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Secrets never enter the repository
+*.jks
+*.keystore
+.env
+.env.*
+google-services.json
+
+# Agent tooling
+.claude/settings.local.json
+.scratch/
+
+# Downloaded speech models during local experiments
+models/
