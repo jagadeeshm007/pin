@@ -68,6 +68,11 @@ sealed interface DebugCommand {
     /** Shows learned per-app quirks. */
     data object Quirks : DebugCommand
 
+    /** Model download status or operation. */
+    data class Models(val op: ModelOp) : DebugCommand
+
+    enum class ModelOp { STATUS, DOWNLOAD, VERIFY, WIPE }
+
     companion object {
         private const val DEFAULT_HISTORY = 10
 
@@ -108,6 +113,12 @@ sealed interface DebugCommand {
                 "profile" -> Profile
 
                 "quirks" -> Quirks
+
+                "models" -> if (rest.isEmpty()) {
+                    Models(ModelOp.STATUS)
+                } else {
+                    ModelOp.entries.firstOrNull { it.name.equals(rest, ignoreCase = true) }?.let { Models(it) }
+                }
 
                 "tap" -> label(Kind.TAP, rest)
 

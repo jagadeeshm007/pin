@@ -3,9 +3,11 @@ package io.github.jagadeeshm007.pin.ui
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.text.format.Formatter
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -18,7 +20,9 @@ import io.github.jagadeeshm007.pin.accessibility.AccessibilityRegistry
 import io.github.jagadeeshm007.pin.core.AppVersion
 import io.github.jagadeeshm007.pin.databinding.ActivityMainBinding
 import io.github.jagadeeshm007.pin.device.DeviceProfileCollector
+import io.github.jagadeeshm007.pin.models.ModuleState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -33,6 +37,7 @@ class MainActivity : AppCompatActivity() {
         collectDeviceProfile()
         val binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        bindModels(binding)
         val info = packageManager.getPackageInfo(packageName, 0)
         binding.version.text =
             getString(R.string.main_version, AppVersion.label(info.versionName, info.longVersionCode))
@@ -50,6 +55,50 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Voice models card (PIN-20): status, size, progress and a Download or Retry button. */
+    private fun bindModels(binding: ActivityMainBinding) {
+        val app = application as PinApp
+        val models = app.models
+        binding.modelsDownload.setOnClickListener {
+            app.appScope.launch { models.downloadAll() }
+        }
+        lifecycleScope.launch { models.refresh() }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                combine(models.states, models.progress) { states, progress ->
+                    states to progress
+                }.collect { (states, p) ->
+                    val total = Formatter.formatShortFileSize(this@MainActivity, p.totalBytes)
+                    val done = Formatter.formatShortFileSize(this@MainActivity, p.doneBytes)
+                    val failed = states.values.filterIsInstance<ModuleState.Failed>().firstOrNull()
+                    val downloading = states.values.any { it == ModuleState.Downloading }
+                    binding.modelsStatus.text = when {
+                        states.values.all { it == ModuleState.Ready } -> getString(R.string.models_ready, total)
+                        downloading -> getString(R.string.models_downloading, done, total)
+                        failed != null -> getString(R.string.models_failed, failed.reason)
+                        else -> getString(R.string.models_missing, total)
+                    }
+                    binding.modelsProgress.visibility = if (downloading) View.VISIBLE else View.GONE
+                    binding.modelsProgress.setProgressCompat((p.doneBytes * PROGRESS_MAX / p.totalBytes).toInt(), true)
+                    binding.modelsDownload.visibility =
+                        if (downloading || states.values.all { it == ModuleState.Ready }) View.GONE else View.VISIBLE
+                    binding.modelsDownload.setText(
+                        if (failed !=
+                            null
+                        ) {
+                            R.string.models_retry
+                        } else {
+                            R.string.models_download
+                        },
+                    )
+                    binding.modelsMetered.visibility = if (isMetered()) View.VISIBLE else View.GONE
+                }
+            }
+        }
+    }
+
+    private fun isMetered(): Boolean = getSystemService(ConnectivityManager::class.java).isActiveNetworkMetered
+
     /** First launch and every open: refresh what Pin knows about this phone (PIN-15). */
     private fun collectDeviceProfile() {
         val app = application as PinApp
@@ -57,6 +106,10 @@ class MainActivity : AppCompatActivity() {
             val profile = withContext(Dispatchers.Default) { DeviceProfileCollector(this@MainActivity).collect() }
             app.profiles.saveProfile(profile)
         }
+    }
+
+    private companion object {
+        const val PROGRESS_MAX = 1000L
     }
 
     private fun requestNotificationPermissionIfNeeded() {

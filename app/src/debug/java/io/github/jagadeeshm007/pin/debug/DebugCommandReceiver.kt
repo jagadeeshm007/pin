@@ -48,6 +48,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class DebugCommandReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val line = intent.getStringExtra(EXTRA_CMD).orEmpty()
+        appContext = context.applicationContext as PinApp
         val pending = goAsync()
         scope.launch {
             val output = try {
@@ -84,8 +85,14 @@ class DebugCommandReceiver : BroadcastReceiver() {
     }
 
     private suspend fun run(line: String): String {
+        val parsed = DebugCommand.parse(line)
+        if (parsed is DebugCommand.Models) {
+            val app = AccessibilityRegistry.service.value?.applicationContext as? PinApp ?: appContext
+                ?: return "error: app not ready"
+            return models(app, parsed.op)
+        }
         val service = AccessibilityRegistry.service.value ?: return "error: accessibility service is off"
-        val command = DebugCommand.parse(line) ?: return "error: cannot parse '$line'"
+        val command = parsed ?: return "error: cannot parse '$line'"
         val screen = AccessibilityScreenSource(service)
         val overlay = service.overlay ?: return "error: overlay not ready"
 
@@ -206,6 +213,8 @@ class DebugCommandReceiver : BroadcastReceiver() {
                 return "retention: $deleted session(s) deleted, ${app.history.fileBytes()} bytes of snapshots kept"
             }
 
+            is DebugCommand.Models -> return "unreachable"
+
             is DebugCommand.Direct -> command.action
 
             is DebugCommand.OnLabel -> resolve(command, screen.current())
@@ -234,6 +243,20 @@ class DebugCommandReceiver : BroadcastReceiver() {
         }
         val trail = events.joinToString("\n") { "  ${describe(it)}" }
         return "task: $taskId\naction: $action\nresult: ${describeResult(result)}\nelapsed: $ms ms\nevents:\n$trail"
+    }
+
+    /** Model commands need no accessibility service. Download runs in the app scope and returns at once. */
+    private suspend fun models(app: PinApp, op: DebugCommand.ModelOp): String {
+        val m = app.models
+        when (op) {
+            DebugCommand.ModelOp.STATUS -> m.refresh()
+            DebugCommand.ModelOp.DOWNLOAD -> app.appScope.launch { m.downloadAll() }
+            DebugCommand.ModelOp.VERIFY -> m.verify()
+            DebugCommand.ModelOp.WIPE -> m.wipe()
+        }
+        val p = m.progress.value
+        return "models: ${p.doneBytes}/${p.totalBytes} bytes\n" +
+            m.states.value.entries.joinToString("\n") { (id, state) -> "  $id: $state" }
     }
 
     private fun statusOf(r: ActionResult): String = when (r) {
@@ -303,5 +326,8 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
         @Volatile
         private var debugSessionId: Long? = null
+
+        @Volatile
+        private var appContext: PinApp? = null
     }
 }

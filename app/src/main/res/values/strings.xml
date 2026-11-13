@@ -33,4 +33,12 @@
     <string name="action_confirm">Confirm</string>
     <string name="action_deny">Deny</string>
     <string name="confirm_card_title">Pin needs your OK</string>
+    <string name="models_title">Voice models</string>
+    <string name="models_missing">Not downloaded yet: %1$s. Pin needs them for voice; nothing leaves your phone except the download request.</string>
+    <string name="models_downloading">Downloading %1$s of %2$s</string>
+    <string name="models_ready">Voice models ready (%1$s)</string>
+    <string name="models_failed">Download stopped: %1$s</string>
+    <string name="models_metered">You are on mobile data. Wi-Fi is recommended.</string>
+    <string name="models_download">Download</string>
+    <string name="models_retry">Retry</string>
 </resources>
