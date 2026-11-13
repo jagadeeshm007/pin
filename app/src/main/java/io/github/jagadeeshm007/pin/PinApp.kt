@@ -12,9 +12,12 @@ import io.github.jagadeeshm007.pin.models.ModelCatalog
 import io.github.jagadeeshm007.pin.models.ModelManager
 import io.github.jagadeeshm007.pin.notification.ConfirmationBroker
 import io.github.jagadeeshm007.pin.notification.TaskNotifier
+import io.github.jagadeeshm007.pin.speech.ListenState
 import io.github.jagadeeshm007.pin.speech.SpeechClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import java.io.File
 
 /** Application entry point; hand-wired dependencies are created here (ADR-0002). */
@@ -64,6 +67,9 @@ class PinApp : Application() {
         if (isSpeechProcess) return
         // Created at start so a confirmation always reaches the notification, even when
         // nothing has shown a status yet in this process (found on device, PIN-13).
-        notifier = TaskNotifier(this, confirmations, mainScope)
+        val listening = speech.state
+            .map { (state, _) -> state != ListenState.STOPPED && state != ListenState.ERROR }
+            .distinctUntilChanged()
+        notifier = TaskNotifier(this, confirmations, mainScope, listening)
     }
 }

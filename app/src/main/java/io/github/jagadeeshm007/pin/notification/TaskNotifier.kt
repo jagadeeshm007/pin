@@ -13,7 +13,9 @@ import android.os.SystemClock
 import androidx.annotation.MainThread
 import androidx.annotation.RequiresApi
 import io.github.jagadeeshm007.pin.R
+import io.github.jagadeeshm007.pin.speech.ListeningService
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 /**
@@ -21,8 +23,15 @@ import kotlinx.coroutines.launch
  * ProgressStyle (or BigTextStyle while idle-listening), a status bar chip, and a
  * promotion request. Older versions get a standard ongoing progress notification with
  * the same text and buttons. Confirm and Deny appear while [broker] has a question.
+ * While [sessionOn] is true the voice session shares this notification (same id), so it
+ * keeps a Stop listening button.
  */
-class TaskNotifier(private val context: Context, private val broker: ConfirmationBroker, scope: CoroutineScope) {
+class TaskNotifier(
+    private val context: Context,
+    private val broker: ConfirmationBroker,
+    scope: CoroutineScope,
+    sessionOn: Flow<Boolean>,
+) {
     private val manager = context.getSystemService(NotificationManager::class.java)
     private val mapper = NotificationContentMapper(ResourceChipLabels(context))
     private val poster = ThrottledPoster<Pair<NotificationContent, Long?>>(
@@ -31,6 +40,7 @@ class TaskNotifier(private val context: Context, private val broker: Confirmatio
         { SystemClock.elapsedRealtime() },
     ) { (content, token) -> post(content, token) }
     private var last: TaskStatus? = null
+    private var listening = false
 
     init {
         createChannel()
@@ -39,10 +49,17 @@ class TaskNotifier(private val context: Context, private val broker: Confirmatio
                 val base = last
                 if (question != null) {
                     val status = TaskStatus(TaskPhase.CONFIRM, question.reason, base?.step ?: 0, base?.totalSteps ?: 0)
-                    poster.submit(mapper.map(status) to question.token, urgent = true)
+                    poster.submit(mapper.map(status, listening) to question.token, urgent = true)
                 } else if (base != null) {
-                    poster.submit(mapper.map(base) to null, urgent = true)
+                    poster.submit(mapper.map(base, listening) to null, urgent = true)
                 }
+            }
+        }
+        scope.launch {
+            sessionOn.collect { on ->
+                listening = on
+                // Re-post at once so the button appears or goes with the session.
+                last?.let { poster.submit(mapper.map(it, on) to broker.pending.value?.token, urgent = true) }
             }
         }
     }
@@ -51,7 +68,7 @@ class TaskNotifier(private val context: Context, private val broker: Confirmatio
     @MainThread
     fun show(status: TaskStatus) {
         last = status
-        val content = mapper.map(status)
+        val content = mapper.map(status, listening)
         poster.submit(content to broker.pending.value?.token, content.urgent)
     }
 
@@ -72,7 +89,7 @@ class TaskNotifier(private val context: Context, private val broker: Confirmatio
     }
 
     private fun build(content: NotificationContent, token: Long?): Notification {
-        val finished = content.actions.isEmpty()
+        val finished = !content.ongoing
         val builder = Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_pin)
             .setContentTitle(context.getString(R.string.app_name))
@@ -131,10 +148,12 @@ class TaskNotifier(private val context: Context, private val broker: Confirmatio
         .build()
 
     private fun action(kind: NotificationAction, token: Long?): Notification.Action {
+        if (kind == NotificationAction.STOP_LISTENING) return stopListening()
         val (label, request) = when (kind) {
             NotificationAction.STOP -> R.string.action_stop to REQUEST_STOP
             NotificationAction.CONFIRM -> R.string.action_confirm to REQUEST_CONFIRM
             NotificationAction.DENY -> R.string.action_deny to REQUEST_DENY
+            NotificationAction.STOP_LISTENING -> error("handled above")
         }
         val intent = Intent(context, NotificationActionReceiver::class.java)
             .setAction(kind.name)
@@ -147,6 +166,18 @@ class TaskNotifier(private val context: Context, private val broker: Confirmatio
         )
         val icon = Icon.createWithResource(context, R.drawable.ic_stat_pin)
         return Notification.Action.Builder(icon, context.getString(label), pending).build()
+    }
+
+    /** The same stop intent the listening service puts on its own notification. */
+    private fun stopListening(): Notification.Action {
+        val pending = PendingIntent.getService(
+            context,
+            REQUEST_STOP_LISTENING,
+            Intent(context, ListeningService::class.java).setAction(ListeningService.ACTION_STOP),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+        val icon = Icon.createWithResource(context, R.drawable.ic_stat_pin)
+        return Notification.Action.Builder(icon, context.getString(R.string.listening_stop), pending).build()
     }
 
     private fun createChannel() {
@@ -173,6 +204,7 @@ class TaskNotifier(private val context: Context, private val broker: Confirmatio
         private const val REQUEST_STOP = 1
         private const val REQUEST_CONFIRM = 2
         private const val REQUEST_DENY = 3
+        private const val REQUEST_STOP_LISTENING = 4
     }
 }
 

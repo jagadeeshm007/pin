@@ -16,7 +16,7 @@ Speech was produced by the phone's own speaker with the debug `say` command
 
 | AC | Evidence | Result |
 | --- | --- | --- |
-| AC-1 | `ListeningService` ran in `io.github.jagadeeshm007.pin.debug:speech`, `isForeground=true`, `types=0x80` (microphone). Microphone released (`dumpsys audio` "rec stop") 142 ms after Stop on the screen and 131 ms after Stop listening in the notification. | pass, with one defect: after any task runs, the shared notification loses its Stop listening button (Not verified, below) |
+| AC-1 | `ListeningService` ran in `io.github.jagadeeshm007.pin.debug:speech`, `isForeground=true`, `types=0x80` (microphone). Microphone released (`dumpsys audio` "rec stop") 142 ms after Stop on the screen and 131 ms after Stop listening in the notification. | pass after the notification fix (see Defects) |
 | AC-2 | With `vad-silero-v5.onnx` moved away: Voice models card "Not downloaded yet: 7.5 MB", Listening card "Download the voice models first.", Start listening `enabled=false`. File restored afterwards. | pass |
 | AC-3 | The recognizer starts only on a segmenter Begin: in 60 s of listening, "recognizer ready" was logged 8 times, once per VAD speech stretch; 5 s windows with 0 speech windows started nothing. `SpeechSegmenterTest` (7 cases). | pass |
 | AC-4 | Screenshot 2.8 s into "open YouTube and play the second video about Java tutorials": overlay pill "Heard: open YouTube and play" (partial). After it ended: pill and card show the full sentence; history task 90 'open YouTube and play the second video about Java tutorials'. Three start, say, stop rounds gave tasks 87, 88, 89. | pass after the rebind fix (see Defects) |
@@ -44,6 +44,15 @@ Speech was produced by the phone's own speaker with the debug `say` command
   Fixed in `SpeechClient.onBindingDied` (unbind, rebind on the next start); verified by
   the three rounds and the kill test above.
 
+- The speech service and the task notifier share notification id 1. After a task
+  finished, the notifier replaced the session notification with the task result: no
+  actions, not ongoing, 10 s timeout, while the microphone stayed on. Fixed: while a
+  session runs, every task notification keeps Stop listening and stays ongoing
+  (`NotificationContentMapperTest`, 4 new cases). Device: after `scroll down` while
+  listening, id 1 showed "success via GESTURE", `ONGOING_EVENT`, Stop listening, still
+  there 12 s later; tapping Stop listening released the microphone 192 ms later. With
+  listening off, a task notification was not ongoing and was gone after 11 s.
+
 ## Budgets
 
 | Budget | Target | Measured | How |
@@ -54,11 +63,6 @@ Speech was produced by the phone's own speaker with the debug `say` command
 
 ## Not verified
 
-- AC-1 defect: the speech service and the task notifier share notification id 1. After
-  a task finishes, the notifier replaces the content with the task result, no actions,
-  not ongoing, 10 s timeout, while the microphone stays on (seen: "success via GESTURE",
-  no Stop listening). Fix needs a plan: the notifier must keep a Stop listening action
-  while a session runs.
 - AC-5: needs a phone call or a recording app holding the mic during a session.
   `RECOGNIZE_SPEECH` and `VOICE_COMMAND` intents from adb did not take the microphone.
 - Idle CPU in a quiet room.

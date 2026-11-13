@@ -3,6 +3,7 @@ package io.github.jagadeeshm007.pin.notification
 import io.github.jagadeeshm007.pin.notification.NotificationAction.CONFIRM
 import io.github.jagadeeshm007.pin.notification.NotificationAction.DENY
 import io.github.jagadeeshm007.pin.notification.NotificationAction.STOP
+import io.github.jagadeeshm007.pin.notification.NotificationAction.STOP_LISTENING
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -34,6 +35,7 @@ class NotificationContentMapperTest {
                 listOf(STOP),
                 urgent = false,
                 popUp = false,
+                ongoing = true,
             ),
             c,
         )
@@ -99,6 +101,43 @@ class NotificationContentMapperTest {
         val c = mapper.map(TaskStatus(TaskPhase.PAUSED, "Microphone in use by a call"))
         assertEquals(listOf(STOP), c.actions)
         assertFalse(c.urgent)
+    }
+
+    @Test
+    fun finishedTasksEndWhenNotListening() {
+        listOf(TaskPhase.DONE, TaskPhase.FAILED).forEach { phase ->
+            val c = mapper.map(TaskStatus(phase, "x"))
+            assertFalse(c.ongoing, "for $phase")
+            assertEquals(emptyList<NotificationAction>(), c.actions, "for $phase")
+        }
+    }
+
+    @Test
+    fun finishedTasksKeepStopListeningWhileASessionRuns() {
+        // PIN-21 verify.md AC-1: the shared notification lost the session's Stop button.
+        listOf(TaskPhase.DONE, TaskPhase.FAILED).forEach { phase ->
+            val c = mapper.map(TaskStatus(phase, "x"), listening = true)
+            assertTrue(c.ongoing, "for $phase")
+            assertEquals(listOf(STOP_LISTENING), c.actions, "for $phase")
+        }
+    }
+
+    @Test
+    fun runningTasksAddStopListeningWhileASessionRuns() {
+        listOf(TaskPhase.LISTENING, TaskPhase.HEARD, TaskPhase.THINKING, TaskPhase.ACTING, TaskPhase.PAUSED)
+            .forEach { phase ->
+                val c = mapper.map(TaskStatus(phase, "x", 1, 2), listening = true)
+                assertTrue(c.ongoing, "for $phase")
+                assertEquals(listOf(STOP, STOP_LISTENING), c.actions, "for $phase")
+            }
+    }
+
+    @Test
+    fun confirmKeepsItsThreeActionsWhileListening() {
+        // Android shows at most three actions.
+        val c = mapper.map(TaskStatus(TaskPhase.CONFIRM, "Send?"), listening = true)
+        assertEquals(listOf(CONFIRM, DENY, STOP), c.actions)
+        assertTrue(c.ongoing)
     }
 
     @Test

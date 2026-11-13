@@ -19,12 +19,13 @@ sealed interface ProgressSpec {
     data class Steps(val done: Int, val total: Int) : ProgressSpec
 }
 
-/** Buttons on the notification. */
-enum class NotificationAction { STOP, CONFIRM, DENY }
+/** Buttons on the notification. STOP ends the task; STOP_LISTENING ends the voice session. */
+enum class NotificationAction { STOP, CONFIRM, DENY, STOP_LISTENING }
 
 /**
  * Platform-free notification content. [urgent] skips throttling; [popUp] shows it as a
  * card again even though the notification already exists (each new question must).
+ * [ongoing] false means the task is over and the notification may time out.
  */
 data class NotificationContent(
     val text: String,
@@ -33,6 +34,7 @@ data class NotificationContent(
     val actions: List<NotificationAction>,
     val urgent: Boolean,
     val popUp: Boolean = false,
+    val ongoing: Boolean = true,
 )
 
 /** Localised chip texts, injected so the mapper stays testable. */
@@ -51,12 +53,16 @@ interface ChipLabels {
 
 /** Maps a [TaskStatus] to what the notification shows (blueprint 7.8). */
 class NotificationContentMapper(private val labels: ChipLabels) {
-    /** Content for [status]. */
-    fun map(status: TaskStatus): NotificationContent {
+    /**
+     * Content for [status]. While [listening], the voice session shares this notification,
+     * so it keeps Stop listening and stays ongoing even after a task ends (PIN-21).
+     */
+    fun map(status: TaskStatus, listening: Boolean = false): NotificationContent {
         val total = status.totalSteps.coerceAtLeast(0)
         val step = if (total > 0) status.step.coerceIn(1, total) else 0
         val running = if (total > 0) ProgressSpec.Steps(step - 1, total) else ProgressSpec.Indeterminate
-        val stop = listOf(NotificationAction.STOP)
+        val session = if (listening) listOf(NotificationAction.STOP_LISTENING) else emptyList()
+        val stop = listOf(NotificationAction.STOP) + session
         return when (status.phase) {
             TaskPhase.LISTENING -> content(status, labels.listening, ProgressSpec.None, stop)
 
@@ -82,11 +88,19 @@ class NotificationContentMapper(private val labels: ChipLabels) {
                 status,
                 labels.done,
                 if (total > 0) ProgressSpec.Steps(total, total) else ProgressSpec.None,
-                emptyList(),
+                session,
                 urgent = true,
+                ongoing = listening,
             )
 
-            TaskPhase.FAILED -> content(status, labels.stopped, ProgressSpec.None, emptyList(), urgent = true)
+            TaskPhase.FAILED -> content(
+                status,
+                labels.stopped,
+                ProgressSpec.None,
+                session,
+                urgent = true,
+                ongoing = listening,
+            )
 
             TaskPhase.PAUSED -> content(status, labels.paused, ProgressSpec.None, stop)
         }
@@ -99,5 +113,6 @@ class NotificationContentMapper(private val labels: ChipLabels) {
         actions: List<NotificationAction>,
         urgent: Boolean = false,
         popUp: Boolean = false,
-    ) = NotificationContent(status.text, chip, progress, actions, urgent, popUp)
+        ongoing: Boolean = true,
+    ) = NotificationContent(status.text, chip, progress, actions, urgent, popUp, ongoing)
 }
