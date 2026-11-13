@@ -73,11 +73,9 @@ class DebugCommandReceiver : BroadcastReceiver() {
     private fun resolve(command: DebugCommand.OnLabel, screen: ScreenSnapshot): DeviceAction? {
         val wantEditable = command.kind == DebugCommand.Kind.TYPE
         val candidates = screen.nodes.filter { !wantEditable || it.has(NodeFlag.EDITABLE) }
-        // Exact label first; a partial match is used only when it is the only one, so
-        // "Search" never lands on "Voice search" (found on YouTube). PIN-31 replaces this.
-        val node = candidates.firstOrNull { it.label.equals(command.label, ignoreCase = true) }
-            ?: candidates.filter { it.label.contains(command.label, ignoreCase = true) }.singleOrNull()
-            ?: return null
+        // Exact labels only: a partial match sent "Search" to "Voice search" on YouTube,
+        // which opened the microphone. Fuzzy matching with disambiguation is PIN-31.
+        val node = candidates.firstOrNull { it.label.equals(command.label, ignoreCase = true) } ?: return null
         val target = TargetRef.Node(node.id)
         return when (command.kind) {
             DebugCommand.Kind.TAP -> DeviceAction.Tap(target)
