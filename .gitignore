@@ -20,4 +20,4 @@ google-services.json
 .scratch/
 
 # Downloaded speech models during local experiments
-models/
+/models/
