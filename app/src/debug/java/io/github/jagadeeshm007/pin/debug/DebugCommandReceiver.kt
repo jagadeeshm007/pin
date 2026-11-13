@@ -13,6 +13,7 @@ import io.github.jagadeeshm007.pin.action.ActionRecorder
 import io.github.jagadeeshm007.pin.action.ActionResult
 import io.github.jagadeeshm007.pin.action.DeviceAction
 import io.github.jagadeeshm007.pin.action.TargetRef
+import io.github.jagadeeshm007.pin.command.LabelResolver
 import io.github.jagadeeshm007.pin.core.screen.NodeFlag
 import io.github.jagadeeshm007.pin.core.screen.ScreenNode
 import io.github.jagadeeshm007.pin.core.screen.ScreenSnapshot
@@ -53,11 +54,10 @@ class DebugCommandReceiver : BroadcastReceiver() {
         scope.launch {
             val output = try {
                 withTimeout(TIMEOUT_MS) {
-                    if (line.startsWith(
-                            "say ",
-                        )
-                    ) {
+                    if (line.startsWith("say ")) {
                         say(context.applicationContext, line.removePrefix("say "))
+                    } else if (line.startsWith("hear ")) {
+                        hear(line.removePrefix("hear "))
                     } else {
                         runUntilStopped(line)
                     }
@@ -68,6 +68,15 @@ class DebugCommandReceiver : BroadcastReceiver() {
             pending.resultData = output
             pending.finish()
         }
+    }
+
+    /** Feeds [text] to the speech bridge as a final transcript (spec PIN-30). */
+    private suspend fun hear(text: String): String = withContext(Dispatchers.Main) {
+        val bridge =
+            AccessibilityRegistry.service.value?.speechBridge
+                ?: return@withContext "error: accessibility service is off"
+        bridge.hear(text)
+        "hear: '$text' routed"
     }
 
     /** Runs [line], cancelling it when the notification's Stop is pressed. */
@@ -308,11 +317,8 @@ class DebugCommandReceiver : BroadcastReceiver() {
     private suspend fun <T> onMain(block: () -> T): T = withContext(Dispatchers.Main) { block() }
 
     private fun resolve(command: DebugCommand.OnLabel, screen: ScreenSnapshot): DeviceAction? {
-        val wantEditable = command.kind == DebugCommand.Kind.TYPE
-        val candidates = screen.nodes.filter { !wantEditable || it.has(NodeFlag.EDITABLE) }
-        // Exact labels only: a partial match sent "Search" to "Voice search" on YouTube,
-        // which opened the microphone. Fuzzy matching with disambiguation is PIN-31.
-        val node = candidates.firstOrNull { it.label.equals(command.label, ignoreCase = true) } ?: return null
+        val node = LabelResolver.find(screen, command.label, editable = command.kind == DebugCommand.Kind.TYPE)
+            ?: return null
         val target = TargetRef.Node(node.id)
         return when (command.kind) {
             DebugCommand.Kind.TAP -> DeviceAction.Tap(target)

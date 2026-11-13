@@ -1,0 +1,215 @@
+# utterance (after the spoken prefix)	expected command, or none
+# "open X" and "tap X" with an unknown X parse here and are rejected later by the app or screen lookup.
+scroll up	scroll up
+Scroll up please	scroll up
+please scroll up	scroll up
+can you scroll up	scroll up
+scroll up.	scroll up
+swipe up	swipe up
+Swipe up please	swipe up
+could you swipe up	swipe up
+scroll down	scroll down
+Scroll down please	scroll down
+please scroll down	scroll down
+can you scroll down	scroll down
+scroll down.	scroll down
+swipe down	swipe down
+Swipe down please	swipe down
+could you swipe down	swipe down
+scroll left	scroll left
+Scroll left please	scroll left
+please scroll left	scroll left
+can you scroll left	scroll left
+scroll left.	scroll left
+swipe left	swipe left
+Swipe left please	swipe left
+could you swipe left	swipe left
+scroll right	scroll right
+Scroll right please	scroll right
+please scroll right	scroll right
+can you scroll right	scroll right
+scroll right.	scroll right
+swipe right	swipe right
+Swipe right please	swipe right
+could you swipe right	swipe right
+page down	scroll down
+Page down please	scroll down
+page up	scroll up
+page up.	scroll up
+back	back
+go back	back
+Go back please	back
+navigate back	back
+press back	back
+go back.	back
+Back	back
+home	home
+go home	home
+Go to the home screen	home
+home screen	home
+go home please	home
+Go Home	home
+recent apps	recents
+show recent apps	recents
+open recents	recents
+recents	recents
+Show recent apps please	recents
+notifications	notifications
+show notifications	notifications
+open notifications	notifications
+open the notifications	notifications
+Show my notifications	notifications
+quick settings	quick settings
+open quick settings	quick settings
+show quick settings	quick settings
+Open the quick settings	quick settings
+zoom in	zoom in
+Zoom in please	zoom in
+zoom out	zoom out
+zoom out please	zoom out
+show numbers	numbers
+Show the numbers	numbers
+numbers	numbers
+hide numbers	hide numbers
+hide the numbers	hide numbers
+hide grid	hide numbers
+Hide	hide numbers
+show grid	grid
+show the grid	grid
+Grid	grid
+tap number 5	tap number 5
+number 5	tap number 5
+tap number five	tap number 5
+number five	tap number 5
+tap number twelve	tap number 12
+number twelve	tap number 12
+tap number 3	tap number 3
+number 3	tap number 3
+tap number one	tap number 1
+number one	tap number 1
+tap number twenty	tap number 20
+number twenty	tap number 20
+tap 7	tap number 7
+click number seven	tap number 7
+stop	stop
+Stop.	stop
+cancel	stop
+stop it	stop
+never mind	stop
+Cancel that	stop
+open YouTube	open youtube
+Open YouTube please	open youtube
+launch YouTube	open youtube
+start YouTube	open youtube
+open the YouTube app	open youtube
+can you open YouTube	open youtube
+open Settings	open settings
+Open Settings please	open settings
+launch Settings	open settings
+start Settings	open settings
+open the Settings app	open settings
+can you open Settings	open settings
+open WhatsApp	open whatsapp
+Open WhatsApp please	open whatsapp
+launch WhatsApp	open whatsapp
+start WhatsApp	open whatsapp
+open the WhatsApp app	open whatsapp
+can you open WhatsApp	open whatsapp
+open Google Maps	open google maps
+Open Google Maps please	open google maps
+launch Google Maps	open google maps
+start Google Maps	open google maps
+open the Google Maps app	open google maps
+can you open Google Maps	open google maps
+open Chrome	open chrome
+Open Chrome please	open chrome
+launch Chrome	open chrome
+start Chrome	open chrome
+open the Chrome app	open chrome
+can you open Chrome	open chrome
+open Clock	open clock
+Open Clock please	open clock
+launch Clock	open clock
+start Clock	open clock
+open the Clock app	open clock
+can you open Clock	open clock
+tap search	tap search
+click search	tap search
+press search	tap search
+tap on search	tap search
+click on the search	tap search
+select search	tap search
+tap Network and internet	tap network and internet
+click Network and internet	tap network and internet
+press Network and internet	tap network and internet
+tap on Network and internet	tap network and internet
+click on the Network and internet	tap network and internet
+select Network and internet	tap network and internet
+tap Settings	tap settings
+click Settings	tap settings
+press Settings	tap settings
+tap on Settings	tap settings
+click on the Settings	tap settings
+select Settings	tap settings
+tap Play	tap play
+click Play	tap play
+press Play	tap play
+tap on Play	tap play
+click on the Play	tap play
+select Play	tap play
+tap Subscribe	tap subscribe
+click Subscribe	tap subscribe
+press Subscribe	tap subscribe
+tap on Subscribe	tap subscribe
+click on the Subscribe	tap subscribe
+select Subscribe	tap subscribe
+tap OK	tap ok
+click OK	tap ok
+press OK	tap ok
+tap on OK	tap ok
+click on the OK	tap ok
+select OK	tap ok
+long press photos	long press photos
+long press on Photos	long press photos
+double tap image	double tap image
+double tap on the image	double tap image
+type hello world	type hello world
+type Hello world	type hello world
+type java tutorials	type java tutorials
+write Java tutorials	type java tutorials
+what time is it	none
+I think we should go back to the office tomorrow	none
+he said scroll down the page and then left	none
+the home team won yesterday	none
+can you believe this	none
+my phone is on the table	none
+stop talking about it already	none
+let's watch YouTube later tonight	none
+I need to go home now because it is late	none
+numbers don't lie	none
+that's a nice picture	none
+turn on the lights	none
+call mom	none
+how is the weather	none
+pass the salt please	none
+where are my keys	none
+scroll	none
+swipe	none
+tap	none
+open	none
+type	none
+zoom	none
+the quick brown fox	none
+yes	none
+no	none
+okay	none
+thank you	none
+hello	none
+go	none
+back to the future was a great movie	none
+double check the report	none
+long story short	none
+show me the money	none
+hide and seek	none
+tab search	tap search
+tab on Settings	tap settings

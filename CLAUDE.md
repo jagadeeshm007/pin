@@ -16,3 +16,6 @@ Add a line each time a mistake repeats; delete lines that stop applying.
 
 - Piping `make check` into `grep` or `tail` hides its exit code. Run gates with
   `set -o pipefail`, or commit in a separate command after reading the result.
+- Chaining `make check ...; git commit` with `;` commits even when the gate fails
+  (happened again in PIN-30). Join the gate and the commit with `&&`, or commit in a
+  separate call after reading `check: passed`.

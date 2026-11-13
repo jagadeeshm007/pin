@@ -53,4 +53,13 @@
     <string name="listening_needs_models">Download the voice models first.</string>
     <string name="listening_needs_mic">Pin needs microphone access to listen.</string>
     <string name="listening_heard">Heard: %1$s</string>
+    <string name="command_not_a_command">Not a command</string>
+    <string name="command_stopped">Stopped</string>
+    <string name="command_no_label">Nothing labelled "%1$s" on screen</string>
+    <string name="command_no_field">No text field to type into</string>
+    <string name="command_no_number">Number %1$d is not shown</string>
+    <string name="command_numbers_shown">Numbers shown</string>
+    <string name="command_numbers_hidden">Numbers hidden</string>
+    <string name="command_grid_shown">Grid shown</string>
+    <string name="command_armed">Listening for a command</string>
 </resources>
