@@ -33,6 +33,7 @@ class ActionOrchestrator(
     private val policy: SensitivityPolicy = SensitivityPolicy(),
     private val verifier: ActionVerifier = ActionVerifier(),
     private val settleTimeoutMs: Long = DEFAULT_SETTLE_TIMEOUT_MS,
+    private val appLaunchTimeoutMs: Long = DEFAULT_APP_LAUNCH_TIMEOUT_MS,
 ) {
     private val mutex = Mutex()
 
@@ -72,18 +73,31 @@ class ActionOrchestrator(
         ActionResult.Failed(reasons)
     }
 
-    /** Returns null on success, or why the attempt failed. */
+    /**
+     * Returns null on success, or why the attempt failed. Screens change in steps (an
+     * app launch first stirs the launcher), so it re-verifies on each change and gives
+     * up when the screen stays quiet for a whole settle period.
+     */
     private suspend fun attempt(action: DeviceAction, strategy: ExecutionStrategy, before: ScreenSnapshot): String? {
         if (!device.perform(action, before, strategy)) return "device refused the action"
-        val after = screen.awaitChange(before, settleTimeoutMs)
-        return when (val verification = verifier.verify(action, before, after)) {
-            Verification.Passed -> null
-            is Verification.Failed -> verification.reason
+        val timeout = if (action is DeviceAction.OpenApp) appLaunchTimeoutMs else settleTimeoutMs
+        var last = before
+        repeat(MAX_SETTLE_ROUNDS) {
+            val after = screen.awaitChange(last, timeout)
+            val verification = verifier.verify(action, before, after)
+            if (verification == Verification.Passed) return null
+            if (after.contentVersion == last.contentVersion) return (verification as Verification.Failed).reason
+            last = after
         }
+        return "screen kept changing without the expected result"
     }
 
     companion object {
         const val DEFAULT_SETTLE_TIMEOUT_MS = 800L
+        const val DEFAULT_APP_LAUNCH_TIMEOUT_MS = 3_000L
+
+        /** Upper bound on re-checks while the screen keeps changing. */
+        const val MAX_SETTLE_ROUNDS = 8
 
         /** Primary plus one fallback (blueprint 6.4). */
         const val MAX_ATTEMPTS = 2

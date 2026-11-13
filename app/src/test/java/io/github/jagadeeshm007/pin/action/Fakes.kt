@@ -40,9 +40,17 @@ class FakeScreen(var current: ScreenSnapshot) : ScreenSource {
 
     override suspend fun current(): ScreenSnapshot = current
 
+    /** Screens returned by successive awaitChange calls, as events arrive one by one. */
+    val upcoming = ArrayDeque<ScreenSnapshot>()
+
+    /** Timeouts passed to awaitChange, so tests can check per-action limits. */
+    val timeouts = mutableListOf<Long>()
+
     override suspend fun awaitChange(since: ScreenSnapshot, timeoutMs: Long): ScreenSnapshot {
+        timeouts += timeoutMs
         gate?.await()
         delay(1)
+        upcoming.removeFirstOrNull()?.let { current = it }
         return current
     }
 }
