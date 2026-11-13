@@ -31,7 +31,7 @@ plan, build, verify, review, done.
 
 | Id | Task | Status |
 | --- | --- | --- |
-| PIN-20 | Module manager: signed catalog, resumable verified downloads, first-launch setup | todo |
+| PIN-20 | Module manager: pinned catalog, resumable verified downloads, first-launch setup card | review |
 | PIN-21 | Listening service and audio thread, mic loss handling | todo |
 | PIN-22 | VAD gate and keyword spotting with user-chosen wake phrase | todo |
 | PIN-23 | Streaming ASR, endpointing, pre-roll, barge-in stop | todo |
