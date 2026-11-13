@@ -1,6 +1,6 @@
 # 0007: Run speech in a separate process
 
-Status: Proposed
+Status: Accepted (maintainer, 2026-11-13)
 Date: 2026-11-13
 
 ## Context
