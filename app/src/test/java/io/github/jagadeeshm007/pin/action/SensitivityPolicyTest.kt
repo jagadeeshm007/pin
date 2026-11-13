@@ -38,7 +38,8 @@ class SensitivityPolicyTest {
     @ValueSource(
         strings = [
             "Send", "Send message", "Delete", "Delete chat", "Remove account", "Transfer", "Buy now",
-            "Place order", "Uninstall", "Factory reset", "Erase all data", "Allow", "Confirm payment", "Post", "Publish",
+            "Place order", "Uninstall", "Factory reset", "Erase all data", "Allow", "Confirm payment",
+            "Post", "Publish",
         ],
     )
     fun sensitiveLabelsAskFirst(label: String) {
