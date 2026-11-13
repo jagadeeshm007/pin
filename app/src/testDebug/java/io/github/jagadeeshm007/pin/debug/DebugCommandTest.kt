@@ -65,6 +65,16 @@ class DebugCommandTest {
         cases.forEach { (line, expected) -> assertEquals(expected, DebugCommand.parse(line), "for '$line'") }
     }
 
+    @Test
+    fun parsesHistoryCommands() {
+        assertEquals(DebugCommand.History(10), DebugCommand.parse("history"))
+        assertEquals(DebugCommand.History(3), DebugCommand.parse("history 3"))
+        assertEquals(DebugCommand.Steps(42), DebugCommand.parse("steps 42"))
+        assertEquals(DebugCommand.Retention, DebugCommand.parse("retention"))
+        assertNull(DebugCommand.parse("history x"))
+        assertNull(DebugCommand.parse("steps"))
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["notify", "notify flying", "notify step 2", "notify step x 5 a", "ask"])
     fun rejectsBadNotificationCommands(line: String) {

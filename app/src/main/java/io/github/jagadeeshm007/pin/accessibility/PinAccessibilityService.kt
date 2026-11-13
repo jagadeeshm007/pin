@@ -38,6 +38,7 @@ class PinAccessibilityService : AccessibilityService() {
         val broker = (applicationContext as PinApp).confirmations
         val card = ConfirmCardController(this, broker).also { confirmCard = it }
         scope.launch { broker.pending.collect { card.render(it) } }
+        scope.launch { RetentionRunner.runWhileConnected(applicationContext as PinApp) }
         AccessibilityRegistry.attach(this)
     }
 
