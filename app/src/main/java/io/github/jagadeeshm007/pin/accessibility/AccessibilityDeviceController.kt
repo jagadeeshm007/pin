@@ -43,10 +43,10 @@ class AccessibilityDeviceController(
         is DeviceAction.LongPress ->
             nodeTarget(action.target, screen)?.let { act(it, screen, true) { n -> n.longClick() } }
 
-        is DeviceAction.Scroll ->
-            scrollContainer(action.containerId, screen)?.let {
-                act(it, screen, false) { n -> n.scroll(action.direction) }
-            }
+        // Largest first; a container that does not move this way is skipped (ScrollChoice).
+        is DeviceAction.Scroll -> scrollables(action.containerId, screen).any {
+            act(it, screen, false) { n -> n.scroll(action.direction) }
+        }
 
         is DeviceAction.TypeText ->
             screen.node(action.targetId)?.let { act(it, screen, false) { n -> n.setText(action.text, action.submit) } }
@@ -73,7 +73,7 @@ class AccessibilityDeviceController(
             is DeviceAction.Scroll ->
                 planner.scroll(
                     action.direction,
-                    scrollContainer(action.containerId, screen)?.bounds ?: screen.windowBounds,
+                    gestureArea(action.containerId, action.direction, screen),
                 )
 
             is DeviceAction.Pinch -> {
@@ -132,10 +132,21 @@ class AccessibilityDeviceController(
     private fun areaOf(containerId: Int?, screen: ScreenSnapshot): Bounds =
         containerId?.let { screen.node(it)?.bounds } ?: screen.windowBounds
 
-    /** The named container, or the largest scrollable node on screen. */
-    private fun scrollContainer(containerId: Int?, screen: ScreenSnapshot): ScreenNode? =
-        containerId?.let { screen.node(it) }
-            ?: screen.nodes.filter { it.has(NodeFlag.SCROLLABLE) }.maxByOrNull { it.bounds.width * it.bounds.height }
+    /** The named container, or every scrollable node, largest first. */
+    private fun scrollables(containerId: Int?, screen: ScreenSnapshot): List<ScreenNode> =
+        containerId?.let { listOfNotNull(screen.node(it)) }
+            ?: screen.nodes.filter { it.has(NodeFlag.SCROLLABLE) }.sortedByDescending {
+                it.bounds.width *
+                    it.bounds.height
+            }
+
+    /** Where to swipe: the largest scrollable on the right axis, else the window. */
+    private fun gestureArea(containerId: Int?, direction: Direction, screen: ScreenSnapshot): Bounds {
+        val sideways = direction == Direction.LEFT || direction == Direction.RIGHT
+        return scrollables(containerId, screen)
+            .firstOrNull { containerId != null || ScrollChoice.looksHorizontal(it.role) == sideways }
+            ?.bounds ?: screen.windowBounds
+    }
 
     private fun displayBounds(): Bounds {
         val wm = service.getSystemService(WindowManager::class.java)
@@ -155,20 +166,36 @@ private fun AccessibilityNodeInfo.click(): Boolean = performAction(Accessibility
 
 private fun AccessibilityNodeInfo.longClick(): Boolean = performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
 
-/** Prefers the directional scroll actions when offered, else forward and backward. */
+private val DIRECTIONAL = mapOf(
+    Direction.DOWN to AccessibilityAction.ACTION_SCROLL_DOWN,
+    Direction.UP to AccessibilityAction.ACTION_SCROLL_UP,
+    Direction.LEFT to AccessibilityAction.ACTION_SCROLL_LEFT,
+    Direction.RIGHT to AccessibilityAction.ACTION_SCROLL_RIGHT,
+)
+
+/** Scrolls [direction] if this node moves that way (see [ScrollChoice]); false if not. */
 private fun AccessibilityNodeInfo.scroll(direction: Direction): Boolean {
-    val directional = when (direction) {
-        Direction.DOWN -> AccessibilityAction.ACTION_SCROLL_DOWN
-        Direction.UP -> AccessibilityAction.ACTION_SCROLL_UP
-        Direction.LEFT -> AccessibilityAction.ACTION_SCROLL_LEFT
-        Direction.RIGHT -> AccessibilityAction.ACTION_SCROLL_RIGHT
+    val ids = actionList.map { it.id }.toSet()
+    val offered = DIRECTIONAL.filterValues { it.id in ids }.keys
+    val collection = collectionInfo
+    val use = ScrollChoice.pick(
+        direction,
+        offered,
+        className?.toString().orEmpty(),
+        collection?.rowCount ?: 0,
+        collection?.columnCount ?: 0,
+    ) ?: return false
+    return when (use) {
+        ScrollChoice.Use.DIRECTIONAL -> performAction(DIRECTIONAL.getValue(direction).id)
+
+        ScrollChoice.Use.FORWARD_BACKWARD -> performAction(
+            if (direction == Direction.DOWN || direction == Direction.RIGHT) {
+                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+            } else {
+                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+            },
+        )
     }
-    if (actionList.any { it.id == directional.id }) return performAction(directional.id)
-    val fallback = when (direction) {
-        Direction.DOWN, Direction.RIGHT -> AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-        Direction.UP, Direction.LEFT -> AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
-    }
-    return performAction(fallback)
 }
 
 private fun AccessibilityNodeInfo.setText(text: String, submit: Boolean): Boolean {
