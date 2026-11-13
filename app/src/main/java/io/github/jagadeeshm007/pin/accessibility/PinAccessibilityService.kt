@@ -3,11 +3,16 @@ package io.github.jagadeeshm007.pin.accessibility
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
+import io.github.jagadeeshm007.pin.PinApp
+import io.github.jagadeeshm007.pin.overlay.ConfirmCardController
 import io.github.jagadeeshm007.pin.overlay.OverlayController
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * Pin's accessibility service. Event handling only bumps [contentVersion] so the
@@ -24,9 +29,15 @@ class PinAccessibilityService : AccessibilityService() {
     var overlay: OverlayController? = null
         private set
 
+    private var confirmCard: ConfirmCardController? = null
+    private val scope = MainScope()
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         overlay = OverlayController(this)
+        val broker = (applicationContext as PinApp).confirmations
+        val card = ConfirmCardController(this, broker).also { confirmCard = it }
+        scope.launch { broker.pending.collect { card.render(it) } }
         AccessibilityRegistry.attach(this)
     }
 
@@ -50,6 +61,9 @@ class PinAccessibilityService : AccessibilityService() {
         AccessibilityRegistry.detach(this)
         overlay?.remove()
         overlay = null
+        confirmCard?.remove()
+        confirmCard = null
+        scope.cancel()
     }
 }
 

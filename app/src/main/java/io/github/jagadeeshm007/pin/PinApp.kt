@@ -13,5 +13,13 @@ class PinApp : Application() {
     val confirmations: ConfirmationBroker by lazy { ConfirmationBroker() }
 
     /** The task notification; use on the main thread. */
-    val notifier: TaskNotifier by lazy { TaskNotifier(this, confirmations, mainScope) }
+    lateinit var notifier: TaskNotifier
+        private set
+
+    override fun onCreate() {
+        super.onCreate()
+        // Created at start so a confirmation always reaches the notification, even when
+        // nothing has shown a status yet in this process (found on device, PIN-13).
+        notifier = TaskNotifier(this, confirmations, mainScope)
+    }
 }

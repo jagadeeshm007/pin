@@ -22,13 +22,17 @@ sealed interface ProgressSpec {
 /** Buttons on the notification. */
 enum class NotificationAction { STOP, CONFIRM, DENY }
 
-/** Platform-free notification content; [urgent] skips throttling. */
+/**
+ * Platform-free notification content. [urgent] skips throttling; [popUp] shows it as a
+ * card again even though the notification already exists (each new question must).
+ */
 data class NotificationContent(
     val text: String,
     val chip: String,
     val progress: ProgressSpec,
     val actions: List<NotificationAction>,
     val urgent: Boolean,
+    val popUp: Boolean = false,
 )
 
 /** Localised chip texts, injected so the mapper stays testable. */
@@ -71,6 +75,7 @@ class NotificationContentMapper(private val labels: ChipLabels) {
                 if (total > 0) running else ProgressSpec.None,
                 listOf(NotificationAction.CONFIRM, NotificationAction.DENY, NotificationAction.STOP),
                 urgent = true,
+                popUp = true,
             )
 
             TaskPhase.DONE -> content(
@@ -93,5 +98,6 @@ class NotificationContentMapper(private val labels: ChipLabels) {
         progress: ProgressSpec,
         actions: List<NotificationAction>,
         urgent: Boolean = false,
-    ) = NotificationContent(status.text, chip, progress, actions, urgent)
+        popUp: Boolean = false,
+    ) = NotificationContent(status.text, chip, progress, actions, urgent, popUp)
 }

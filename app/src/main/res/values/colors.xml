@@ -3,6 +3,7 @@
      colours rather than the app theme. -->
 <resources>
     <color name="overlay_pill_background">#E6111418</color>
+    <color name="overlay_card_background">#FF111418</color>
     <color name="overlay_pill_text">#FFFFFFFF</color>
     <color name="overlay_dot_neutral">#FF9AA0A6</color>
     <color name="overlay_dot_active">#FF34A853</color>

@@ -78,7 +78,7 @@ class TaskNotifier(private val context: Context, private val broker: Confirmatio
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(content.text)
             .setOngoing(!finished)
-            .setOnlyAlertOnce(true)
+            .setOnlyAlertOnce(!content.popUp)
             .setCategory(Notification.CATEGORY_PROGRESS)
             .setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(publicVersion(content))

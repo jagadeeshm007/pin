@@ -16,6 +16,7 @@ import io.github.jagadeeshm007.pin.core.screen.NodeFlag
 import io.github.jagadeeshm007.pin.core.screen.ScreenNode
 import io.github.jagadeeshm007.pin.core.screen.ScreenSnapshot
 import io.github.jagadeeshm007.pin.notification.BrokerConfirmer
+import io.github.jagadeeshm007.pin.notification.TaskControl
 import io.github.jagadeeshm007.pin.notification.TaskPhase
 import io.github.jagadeeshm007.pin.notification.TaskStatus
 import io.github.jagadeeshm007.pin.overlay.GridModel
@@ -23,10 +24,16 @@ import io.github.jagadeeshm007.pin.overlay.NumberLabeler
 import io.github.jagadeeshm007.pin.overlay.OverlayState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Debug builds only. Runs one command through the real orchestrator so device
@@ -42,12 +49,35 @@ class DebugCommandReceiver : BroadcastReceiver() {
         val pending = goAsync()
         scope.launch {
             val output = try {
-                withTimeout(TIMEOUT_MS) { run(line) }
+                withTimeout(TIMEOUT_MS) { runUntilStopped(line) }
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 "error: timed out after $TIMEOUT_MS ms (${e.message})"
             }
             pending.resultData = output
             pending.finish()
+        }
+    }
+
+    /** Runs [line], cancelling it when the notification's Stop is pressed. */
+    private suspend fun runUntilStopped(line: String): String = coroutineScope {
+        val work = async { run(line) }
+        val stop = launch {
+            TaskControl.stopRequests.first()
+            work.cancel()
+        }
+        try {
+            work.await()
+        } catch (e: CancellationException) {
+            if (!isActive) throw e
+            withContext(NonCancellable + Dispatchers.Main) {
+                (AccessibilityRegistry.service.value?.applicationContext as? PinApp)?.notifier?.show(
+                    TaskStatus(TaskPhase.FAILED, "Stopped by user"),
+                )
+                AccessibilityRegistry.service.value?.overlay?.showState(OverlayState.IDLE)
+            }
+            "stopped: Stop pressed in the notification"
+        } finally {
+            stop.cancel()
         }
     }
 
@@ -129,7 +159,20 @@ class DebugCommandReceiver : BroadcastReceiver() {
             is DebugCommand.Ask -> {
                 lastAnswer = "waiting"
                 scope.launch {
-                    lastAnswer = if (app.confirmations.request(command.question)) "confirmed" else "denied"
+                    // Broadcasts reach this receiver one at a time, so Stop is tested on a
+                    // pending question rather than on a blocking command.
+                    val question = async { app.confirmations.request(command.question) }
+                    val watcher = launch {
+                        TaskControl.stopRequests.first()
+                        question.cancel()
+                    }
+                    lastAnswer = try {
+                        if (question.await()) "confirmed" else "denied"
+                    } catch (e: CancellationException) {
+                        "stopped"
+                    } finally {
+                        watcher.cancel()
+                    }
                 }
                 return "ask: '${command.question}' pending"
             }
@@ -192,7 +235,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
         is ActionEvent.Succeeded -> "succeeded with ${e.strategy}"
         is ActionEvent.Rejected -> "rejected: ${e.reason}"
         is ActionEvent.ConfirmationRequested -> "confirmation requested: ${e.reason}"
-        is ActionEvent.Declined -> "declined (debug receiver never confirms)"
+        is ActionEvent.Declined -> "declined, or no answer in time"
     }
 
     private fun describeResult(r: ActionResult): String = when (r) {

@@ -27,7 +27,14 @@ class NotificationContentMapperTest {
     fun listeningOffersStopOnly() {
         val c = mapper.map(TaskStatus(TaskPhase.LISTENING, "Say 'hey pin'"))
         assertEquals(
-            NotificationContent("Say 'hey pin'", "Listening", ProgressSpec.None, listOf(STOP), urgent = false),
+            NotificationContent(
+                "Say 'hey pin'",
+                "Listening",
+                ProgressSpec.None,
+                listOf(STOP),
+                urgent = false,
+                popUp = false,
+            ),
             c,
         )
     }
@@ -92,5 +99,13 @@ class NotificationContentMapperTest {
         val c = mapper.map(TaskStatus(TaskPhase.PAUSED, "Microphone in use by a call"))
         assertEquals(listOf(STOP), c.actions)
         assertFalse(c.urgent)
+    }
+
+    @Test
+    fun onlyQuestionsPopUp() {
+        TaskPhase.entries.forEach { phase ->
+            val c = mapper.map(TaskStatus(phase, "x", 1, 2))
+            assertEquals(phase == TaskPhase.CONFIRM, c.popUp, "for $phase")
+        }
     }
 }

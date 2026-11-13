@@ -3,6 +3,7 @@ package io.github.jagadeeshm007.pin.notification
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import io.github.jagadeeshm007.pin.PinApp
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -16,6 +17,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext as PinApp
         val token = intent.getLongExtra(EXTRA_TOKEN, TaskNotifier.NO_TOKEN)
+        Log.d(TAG, "notification action ${intent.action}")
         when (intent.action) {
             NotificationAction.STOP.name -> TaskControl.requestStop()
             NotificationAction.CONFIRM.name -> app.confirmations.answer(token, yes = true)
@@ -25,6 +27,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_TOKEN = "token"
+        private const val TAG = "PinNotification"
     }
 }
 

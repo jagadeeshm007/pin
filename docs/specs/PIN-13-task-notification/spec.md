@@ -20,6 +20,7 @@ is a Live Update; older versions get a standard progress notification.
   immediately); Stop, Confirm and Deny actions; a confirmation broker that backs a
   `Confirmer`, with a timeout that defaults to deny; notification permission request
   in the main screen; debug commands.
+- In (added): a persistent confirmation card in the accessibility overlay.
 - Out: owning the notification from the microphone foreground service (PIN-21),
   voice confirmation (PIN-30).
 
@@ -31,6 +32,7 @@ is a Live Update; older versions get a standard progress notification.
 - AC-4: WHEN a sensitive action needs confirmation THE notification SHALL show Confirm and Deny; THE answer SHALL resolve the pending request; no answer within the timeout SHALL count as deny.
 - AC-5: WHEN Stop is tapped THE stop signal SHALL be emitted.
 - AC-6: Action intents SHALL be explicit, immutable and delivered to a non-exported receiver.
+- AC-7 (added 2026-11-13, maintainer request): WHILE a confirmation is pending THE app SHALL show a card in its own overlay with the question and Confirm, Deny and Stop, which stays until answered, stopped or timed out; touches outside the card SHALL reach the app underneath. Reason: system pop-ups close after a few seconds and only appear for high-importance channels.
 
 ## Budgets touched
 
