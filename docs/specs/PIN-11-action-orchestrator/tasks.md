@@ -7,4 +7,4 @@ Plan: ./plan.md
 - [x] T3 [P] [AC-4] Sensitivity policy (test: `SensitivityPolicyTest`)
 - [x] T4 [P] [AC-6] Verifier (test: `ActionVerifierTest`)
 - [x] T5 [AC-4] [AC-5] [AC-6] [AC-7] [AC-8] [AC-9] Orchestrator with ports and fakes (test: `ActionOrchestratorTest`)
-- [ ] T6 Verify file and roadmap status
+- [x] T6 Verify file and roadmap status

@@ -8,7 +8,7 @@ plan, build, verify, review, done.
 
 | Id | Task | Status |
 | --- | --- | --- |
-| PIN-1 | Repository and AI-SDLC setup | review |
+| PIN-1 | Repository and AI-SDLC setup | done |
 | PIN-2 | sherpa-onnx on the device matrix: APK delta, RAM, idle CPU, wake and ASR latency, 16 KB alignment | todo |
 | PIN-3 | Microphone foreground service start paths (activity, notification, tile) on Android 14, 16, 17 | todo |
 | PIN-4 | Gesture and node-action coverage on YouTube, Settings, WhatsApp, Chrome, one Flutter app | todo |
@@ -21,7 +21,7 @@ plan, build, verify, review, done.
 | Id | Task | Status |
 | --- | --- | --- |
 | PIN-10 | AccessibilityService, screen model snapshot, fixture app | todo |
-| PIN-11 | Action registry and orchestrator with verification and cancellation | todo |
+| PIN-11 | Action registry and orchestrator with verification and cancellation | review |
 | PIN-12 | Overlay: states, numbers, grid | todo |
 | PIN-13 | Task notification: Live Update with legacy fallback | todo |
 | PIN-14 | History store schema, file layout, retention job | todo |
