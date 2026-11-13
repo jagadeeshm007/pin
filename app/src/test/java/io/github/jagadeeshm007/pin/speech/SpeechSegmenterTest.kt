@@ -74,9 +74,9 @@ class SpeechSegmenterTest {
 
     @Test
     fun defaultsMatchTheSpec() {
-        // 600 ms of silence ends an utterance; 300 ms of pre-roll; 15 s cap.
+        // 600 ms of silence ends an utterance; 640 ms of pre-roll; 15 s cap.
         assertEquals(19, SpeechSegmenter.DEFAULT_END_SILENCE_WINDOWS)
-        assertEquals(10, SpeechSegmenter.DEFAULT_PRE_ROLL_WINDOWS)
+        assertEquals(20, SpeechSegmenter.DEFAULT_PRE_ROLL_WINDOWS)
         assertEquals(469, SpeechSegmenter.DEFAULT_MAX_WINDOWS)
     }
 }

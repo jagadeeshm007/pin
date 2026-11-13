@@ -84,8 +84,8 @@ class SpeechSegmenter(
         const val SAMPLE_RATE = 16_000
         const val WINDOW = 512
 
-        /** About 300 ms before speech, so the first word is not clipped. */
-        const val DEFAULT_PRE_ROLL_WINDOWS = 10
+        /** About 640 ms before speech; 320 ms clipped first words on device (PIN-21). */
+        const val DEFAULT_PRE_ROLL_WINDOWS = 20
 
         /** About 600 ms of silence ends an utterance. */
         const val DEFAULT_END_SILENCE_WINDOWS = 19

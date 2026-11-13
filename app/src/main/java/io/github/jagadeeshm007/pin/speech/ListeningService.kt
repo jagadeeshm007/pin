@@ -17,6 +17,7 @@ import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.AudioRecordingConfiguration
 import android.media.MediaRecorder
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
@@ -118,8 +119,8 @@ class ListeningService : Service() {
     @SuppressLint("MissingPermission") // checked in startSession
     private fun runAudio() {
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
-        val engine = try {
-            SpeechEngine.load(File(filesDir, MODELS_DIR))
+        val detector = try {
+            VoiceDetector.load(File(filesDir, MODELS_DIR))
         } catch (e: IllegalArgumentException) {
             publish(ListenState.ERROR, e.message)
             main.post { stopSession() }
@@ -127,9 +128,27 @@ class ListeningService : Service() {
         }
         if (!running) {
             // Stop was pressed while models were loading (found on device): never start the mic.
-            engine.release()
+            detector.release()
             return
         }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            // TODO(PIN-21): fall back to the sherpa recognizer below Android 13.
+            detector.release()
+            publish(ListenState.ERROR, "speech recognition needs Android 13 or later")
+            main.post { stopSession() }
+            return
+        }
+        var utteranceAudioMs = 0L
+        val transcriber = AndroidTranscriber(
+            this,
+            onPartial = { publish(SpeechEvent.Partial(it)) },
+            onFinal = { text, decodeMs ->
+                Log.d(TAG, "final after ${decodeMs}ms, ${text.length} chars")
+                if (text.isNotEmpty()) publish(SpeechEvent.Final(text, utteranceAudioMs, decodeMs))
+            },
+            onFailure = { Log.d(TAG, "recognizer: $it") },
+        )
+        Log.d(TAG, "transcriber: android, onDevice=${transcriber.onDevice}")
         val minBuffer = AudioRecord.getMinBufferSize(
             SpeechSegmenter.SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
@@ -148,7 +167,6 @@ class ListeningService : Service() {
         val pcm = ShortArray(SpeechSegmenter.WINDOW)
         var utteranceStart = 0L
         var utteranceSamples = 0L
-        var decodeNs = 0L
         var windows = 0
         var peak = 0
         var speechWindows = 0
@@ -161,12 +179,12 @@ class ListeningService : Service() {
                 if (n != pcm.size) continue
                 if (silenced) {
                     segmenter.reset()
-                    engine.cancel()
+                    transcriber.cancel()
                     continue
                 }
                 for (v in pcm) peak = maxOf(peak, kotlin.math.abs(v.toInt()))
                 val window = FloatArray(n) { pcm[it] / PCM_SCALE }
-                val speech = engine.speechProbability(window) > VAD_THRESHOLD
+                val speech = detector.speechProbability(window) > VAD_THRESHOLD
                 windows++
                 if (speech) speechWindows++
                 val now = SystemClock.elapsedRealtime()
@@ -178,32 +196,28 @@ class ListeningService : Service() {
                     lastStatsAt = now
                 }
                 for (action in segmenter.push(window, speech)) {
-                    val t = System.nanoTime()
                     when (action) {
                         is SegmentAction.Begin -> {
                             utteranceStart = SystemClock.elapsedRealtime()
                             utteranceSamples = action.samples.size.toLong()
-                            decodeNs = 0
-                            engine.begin(action.samples)?.let { if (it.isNotEmpty()) publish(SpeechEvent.Partial(it)) }
+                            transcriber.begin(action.samples)
                         }
 
                         is SegmentAction.Feed -> {
                             utteranceSamples += action.samples.size
-                            engine.feed(action.samples)?.let { if (it.isNotEmpty()) publish(SpeechEvent.Partial(it)) }
+                            transcriber.feed(action.samples)
                         }
 
                         is SegmentAction.End -> {
-                            val text = engine.finish()
-                            decodeNs += System.nanoTime() - t
-                            val audioMs = utteranceSamples * MS_PER_S / SpeechSegmenter.SAMPLE_RATE
+                            utteranceAudioMs = utteranceSamples * MS_PER_S / SpeechSegmenter.SAMPLE_RATE
                             Log.d(
                                 TAG,
-                                "utterance ${action.reason} audio=${audioMs}ms wall=${SystemClock.elapsedRealtime() - utteranceStart}ms",
+                                "utterance ${action.reason} audio=${utteranceAudioMs}ms " +
+                                    "wall=${SystemClock.elapsedRealtime() - utteranceStart}ms",
                             )
-                            if (text.isNotEmpty()) publish(SpeechEvent.Final(text, audioMs, decodeNs / NS_PER_MS))
+                            transcriber.end()
                         }
                     }
-                    if (action !is SegmentAction.End) decodeNs += System.nanoTime() - t
                 }
             }
         } finally {
@@ -211,7 +225,8 @@ class ListeningService : Service() {
             runCatching { record.stop() }
             record.release()
             recorder = null
-            engine.release()
+            transcriber.release()
+            detector.release()
         }
     }
 
@@ -286,7 +301,6 @@ class ListeningService : Service() {
         private const val BUFFER_SECONDS = 1
         private const val STOP_JOIN_MS = 500L
         private const val MS_PER_S = 1000L
-        private const val NS_PER_MS = 1_000_000L
         private const val TAG = "PinSpeech"
         private const val STATS_EVERY_MS = 5_000L
 

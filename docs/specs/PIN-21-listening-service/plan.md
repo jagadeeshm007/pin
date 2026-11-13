@@ -7,7 +7,7 @@ Spec: ./spec.md
 
 | Pure (JVM tests) | Android |
 | --- | --- |
-| `SpeechSegmenter`: consumes VAD decisions per 32 ms window, decides when to start feeding ASR (with 300 ms pre-roll), and when an utterance ends (600 ms silence, 15 s cap) | `ListeningService` (FGS microphone, `:speech`): audio thread, sherpa Vad + OnlineRecognizer, startForeground, `Messenger` binder |
+| `SpeechSegmenter`: consumes VAD decisions per 32 ms window, decides when to start feeding ASR (with 640 ms pre-roll; 300 ms clipped first words on device), and when an utterance ends (600 ms silence, 15 s cap) | `ListeningService` (FGS microphone, `:speech`): audio thread, sherpa Vad + OnlineRecognizer, startForeground, `Messenger` binder |
 | `SpeechEvent` (State, Partial, Final) and its `Bundle` mapping | `SpeechClient` (main process): binds when listening, receives events, updates overlay, records history |
 | | `PinApp`: skip main-process setup in `:speech` (one `Application` class, two processes) |
 | | `MainActivity`: Start/Stop listening, permission request |
