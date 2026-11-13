@@ -46,6 +46,7 @@ class ListeningService : Service() {
             when (msg.what) {
                 MSG_REGISTER -> msg.replyTo?.let { client ->
                     clients += client
+                    Log.d(TAG, "client registered, clients=${clients.size}, state=$state")
                     send(client, SpeechEvent.State(state, detail))
                 }
 
@@ -66,6 +67,7 @@ class ListeningService : Service() {
     private var recorder: AudioRecord? = null
     private val recordingCallback = object : AudioManager.AudioRecordingCallback() {
         override fun onRecordingConfigChanged(configs: MutableList<AudioRecordingConfiguration>?) {
+            if (!running) return
             val mine = recorder?.activeRecordingConfiguration ?: return
             silenced = mine.isClientSilenced
             publish(
@@ -123,6 +125,11 @@ class ListeningService : Service() {
             main.post { stopSession() }
             return
         }
+        if (!running) {
+            // Stop was pressed while models were loading (found on device): never start the mic.
+            engine.release()
+            return
+        }
         val minBuffer = AudioRecord.getMinBufferSize(
             SpeechSegmenter.SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
@@ -142,9 +149,12 @@ class ListeningService : Service() {
         var utteranceStart = 0L
         var utteranceSamples = 0L
         var decodeNs = 0L
+        var windows = 0
+        var speechWindows = 0
+        var lastStatsAt = SystemClock.elapsedRealtime()
         try {
             record.startRecording()
-            publish(ListenState.LISTENING, null)
+            if (running) publish(ListenState.LISTENING, null)
             while (running) {
                 val n = record.read(pcm, 0, pcm.size)
                 if (n != pcm.size) continue
@@ -155,6 +165,15 @@ class ListeningService : Service() {
                 }
                 val window = FloatArray(n) { pcm[it] / PCM_SCALE }
                 val speech = engine.speechProbability(window) > VAD_THRESHOLD
+                windows++
+                if (speech) speechWindows++
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastStatsAt >= STATS_EVERY_MS) {
+                    Log.d(TAG, "vad: $speechWindows of $windows windows were speech")
+                    windows = 0
+                    speechWindows = 0
+                    lastStatsAt = now
+                }
                 for (action in segmenter.push(window, speech)) {
                     val t = System.nanoTime()
                     when (action) {
@@ -194,6 +213,7 @@ class ListeningService : Service() {
     }
 
     private fun publish(newState: ListenState, newDetail: String?) {
+        Log.d(TAG, "state $newState (${newDetail ?: "-"}), clients=${clients.size}")
         state = newState
         detail = newDetail
         publish(SpeechEvent.State(newState, newDetail))
@@ -265,6 +285,7 @@ class ListeningService : Service() {
         private const val MS_PER_S = 1000L
         private const val NS_PER_MS = 1_000_000L
         private const val TAG = "PinSpeech"
+        private const val STATS_EVERY_MS = 5_000L
 
         /** Starts the session; call only from a user action in the foreground. */
         fun start(context: Context) {
