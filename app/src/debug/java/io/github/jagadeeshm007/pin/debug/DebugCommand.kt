@@ -62,6 +62,12 @@ sealed interface DebugCommand {
     /** Runs history retention now. */
     data object Retention : DebugCommand
 
+    /** Shows the stored device profile. */
+    data object Profile : DebugCommand
+
+    /** Shows learned per-app quirks. */
+    data object Quirks : DebugCommand
+
     companion object {
         private const val DEFAULT_HISTORY = 10
 
@@ -98,6 +104,10 @@ sealed interface DebugCommand {
                 "steps" -> rest.toLongOrNull()?.let { Steps(it) }
 
                 "retention" -> Retention
+
+                "profile" -> Profile
+
+                "quirks" -> Quirks
 
                 "tap" -> label(Kind.TAP, rest)
 
