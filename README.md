@@ -12,7 +12,7 @@ Status: early development. Today the app is a skeleton; the roadmap is in
 ## How it works (planned)
 
 - An AccessibilityService reads the screen and performs taps, swipes, scrolls and navigation.
-- On-device speech (sherpa-onnx): voice activity detection, a wake phrase you pick, streaming transcription. Audio never leaves the phone.
+- Speech: voice detection and a wake phrase you pick run on device (sherpa-onnx); transcription uses Android's on-device recognizer (Android 13+). On phones without on-device recognition the system recognizer may use the network.
 - Local command engine for common commands; an LLM planner (Claude, OpenAI, Gemini or OpenRouter) for multi-step tasks, limited to a fixed set of validated actions.
 - Sensitive actions (pay, send, delete, security settings) always ask you first.
 - Full local history of sessions, screenshots and reasoning summaries, deleted after 7 days by default.

@@ -34,7 +34,7 @@ plan, build, verify, review, done.
 | PIN-20 | Module manager: pinned catalog, resumable verified downloads, first-launch setup card | review |
 | PIN-21 | Listening service and audio thread, mic loss handling | todo |
 | PIN-22 | VAD gate and keyword spotting with user-chosen wake phrase | todo |
-| PIN-23 | Streaming ASR, endpointing, pre-roll, barge-in stop | todo |
+| PIN-23 | Endpointing, pre-roll and barge-in stop on the Android recognizer (ADR-0010) | todo |
 | PIN-24 | TTS and earcons | todo |
 
 ## Phase 3: Local commands
@@ -65,7 +65,6 @@ plan, build, verify, review, done.
 | PIN-50 | History viewer, pin, export, delete, storage meter, retention settings | todo |
 | PIN-51 | Budget measurements and tuning | todo |
 | PIN-52 | OEM guidance, call and Bluetooth drills, onboarding | todo |
-| PIN-53 | Android SpeechRecognizer engine (Variant B) | todo |
 
 ## Phase 6: Open-source release
 

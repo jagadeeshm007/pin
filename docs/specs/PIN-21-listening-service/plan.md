@@ -13,8 +13,9 @@ Spec: ./spec.md
 | | `MainActivity`: Start/Stop listening, permission request |
 | | Manifest: `RECORD_AUDIO`, `FOREGROUND_SERVICE_MICROPHONE`, service with `foregroundServiceType="microphone"` and `process=":speech"` |
 
-Engine config from PIN-2: Silero VAD v5 (threshold 0.5, 512-sample windows, 1 thread),
-streaming Zipformer int8 with `modelType = "zipformer"`, 2 threads.
+Engine config from PIN-2: Silero VAD v5 (threshold 0.5, 512-sample windows, 1 thread).
+Transcription: Android's on-device recognizer fed through a pipe (ADR-0010); the sherpa
+streaming Zipformer was removed after device tests.
 
 The FGS notification is posted by the speech process with the shared channel and ID 1,
 so the existing notification becomes the session notification. The main process keeps
