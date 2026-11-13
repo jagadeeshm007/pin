@@ -9,7 +9,7 @@ plan, build, verify, review, done.
 | Id | Task | Status |
 | --- | --- | --- |
 | PIN-1 | Repository and AI-SDLC setup | done |
-| PIN-2 | sherpa-onnx on the device matrix: APK delta, RAM, idle CPU, wake and ASR latency, 16 KB alignment | todo |
+| PIN-2 | sherpa-onnx on the device matrix: APK delta, RAM, idle CPU, wake and ASR latency, 16 KB alignment | done (Nothing A059; findings in docs/spikes/PIN-2-sherpa-onnx.md; KWS crash and missing first words open) |
 | PIN-3 | Microphone foreground service start paths (activity, notification, tile) on Android 14, 16, 17 | todo |
 | PIN-4 | Gesture and node-action coverage on YouTube, Settings, WhatsApp, Chrome, one Flutter app | todo |
 | PIN-5 | Planner prototype on recorded screens against Claude, OpenAI, Gemini, OpenRouter | todo |
