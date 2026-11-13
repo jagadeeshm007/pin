@@ -3,6 +3,9 @@ package io.github.jagadeeshm007.pin.action
 import io.github.jagadeeshm007.pin.action.Fixtures.LIST
 import io.github.jagadeeshm007.pin.action.Fixtures.QUERY
 import io.github.jagadeeshm007.pin.action.Fixtures.SEARCH
+import io.github.jagadeeshm007.pin.core.screen.Bounds
+import io.github.jagadeeshm007.pin.core.screen.NodeFlag
+import io.github.jagadeeshm007.pin.core.screen.ScreenNode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -73,6 +76,28 @@ class ActionVerifierTest {
         val action = DeviceAction.TypeText(QUERY, "Java tutorials", submit = true)
         val results = Fixtures.screen(windowTitle = "Results", contentVersion = 3)
         assertEquals(Verification.Passed, verifier.verify(action, before, results))
+    }
+
+    @Test
+    fun submittedSearchPassesWhenTheQueryIsShownInTheSameWindow() {
+        // Found on YouTube: results replace the field with a plain label in the same window.
+        val action = DeviceAction.TypeText(QUERY, "Java tutorials", submit = true)
+        val results = Fixtures.screen(contentVersion = 5).let {
+            it.copy(
+                nodes = it.nodes.filter { n -> n.id != QUERY } +
+                    ScreenNode(90, "TextView", "Java tutorials", Bounds(131, 145, 761, 220), setOf(NodeFlag.CLICKABLE)),
+            )
+        }
+        assertEquals(Verification.Passed, verifier.verify(action, before, results))
+    }
+
+    @Test
+    fun submittedSearchFailsWhenNothingChanged() {
+        val action = DeviceAction.TypeText(QUERY, "Java tutorials", submit = true)
+        val sameButLabelled = Fixtures.screen(contentVersion = 1).let {
+            it.copy(nodes = it.nodes + ScreenNode(90, "TextView", "Java tutorials", Bounds(0, 0, 10, 10)))
+        }
+        assertTrue(verifier.verify(action, before, sameButLabelled) is Verification.Failed)
     }
 
     private fun assertFailed(result: Verification, reasonContains: String) {
