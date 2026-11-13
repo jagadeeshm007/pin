@@ -132,7 +132,7 @@ class ListeningService : Service() {
             return
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            // TODO(PIN-21): fall back to the sherpa recognizer below Android 13.
+            // The audio pipe needs API 33; there is no other recognizer (ADR-0010).
             detector.release()
             publish(ListenState.ERROR, "speech recognition needs Android 13 or later")
             main.post { stopSession() }

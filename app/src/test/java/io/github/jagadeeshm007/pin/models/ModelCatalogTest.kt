@@ -9,8 +9,9 @@ class ModelCatalogTest {
 
     @Test
     fun totalsMatchAdr0008() {
-        assertEquals(9, all.size)
-        assertEquals(42_712_437L, all.sumOf { it.sizeBytes })
+        // ADR-0008 listed 9 files; ADR-0010 removed the 4 asr-en files.
+        assertEquals(5, all.size)
+        assertEquals(7_545_584L, all.sumOf { it.sizeBytes })
         assertTrue(ModelCatalog.V1.totalBytes < 80L * 1024 * 1024, "first-launch budget")
     }
 
@@ -31,7 +32,7 @@ class ModelCatalogTest {
     }
 
     @Test
-    fun modulesAreVadKwsAsr() {
-        assertEquals(listOf("vad", "kws", "asr-en"), ModelCatalog.V1.modules.map { it.id })
+    fun modulesAreVadAndKws() {
+        assertEquals(listOf("vad", "kws"), ModelCatalog.V1.modules.map { it.id })
     }
 }

@@ -22,7 +22,9 @@ microphone itself, which breaks the single-owner rule (AGENTS.md). From API 33,
   (`createSpeechRecognizer` when on-device recognition is unavailable).
 - The language is the first installed English pack, preferring `en-US`, read with
   `checkRecognitionSupport`. The A059 has only `en-IN` and refuses `en-US`.
-- Requires API 33. Below that the session reports an error (TODO(PIN-21): sherpa fallback).
+- Requires API 33. Below that the session reports an error; there is no second engine.
+- The sherpa streaming ASR (`SpeechEngine`) and the `asr-en` catalog module are removed.
+  sherpa-onnx stays for voice detection and the wake word.
 
 Device findings that shaped the code (Google's service, `com.google.android.as`):
 
@@ -40,8 +42,10 @@ Device findings that shaped the code (Google's service, `com.google.android.as`)
 - Better accuracy and roughly 40 ms from end of speech to final text on the A059.
 - Depends on Google's on-device speech service and its language pack; devices without
   it fall back to the cloud-capable default recognizer.
-- The sherpa ASR model files in the catalog and `SpeechEngine` are now unused by the
-  service; whether to keep them as the fallback is open.
+- The first-launch download drops about 35 MB (the `asr-en` module): the catalog in
+  ADR-0008 goes from 9 files and 42.7 MB to 5 files and 7.5 MB. The files stay on the
+  `models-v1` release; no app version downloads them.
+- Android 11 and 12 can run the session but cannot transcribe.
 
 ## Alternatives
 

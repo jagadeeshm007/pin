@@ -190,8 +190,8 @@ Gating rule: KWS runs only on frames the VAD marks as speech. That is what keeps
 
 | Option | Streaming partials | Offline | Size on device | Latency to first partial | Languages | Mic ownership | Verdict |
 |---|---|---|---|---|---|---|---|
-| **sherpa-onnx streaming Zipformer int8** | Yes | Yes | ~40 to 70 MB (downloaded) | ~150 to 300 ms on mobile, RTF well under 0.3 | English and bilingual models available; multilingual Zipformer, Paraformer, SenseVoice via same runtime | We own the mic | **Primary.** Deterministic, no GMS dependency, partials enable early intent. |
-| Android `SpeechRecognizer` on-device (API 31+ `createOnDeviceSpeechRecognizer`) | Partials yes, control limited | Yes, if Google speech services installed | 0 MB in APK | Good | Many | Google's process takes the mic; our stream is silenced during recognition; documentation says the API "is not intended to be used for continuous recognition" | **Secondary engine** behind the same interface; zero download path for GMS devices |
+| sherpa-onnx streaming Zipformer int8 | Yes | Yes | ~35 MB (downloaded) | Fast | English | We own the mic | **Removed** (ADR-0010): accuracy on device was too low for short commands |
+| **Android `SpeechRecognizer` on-device**, fed through `EXTRA_AUDIO_SOURCE` (API 33+) | Yes | Yes, with Google's on-device speech service | 0 MB | About 40 ms after end of speech on the A059 | Installed language packs | We own the mic; audio goes through a pipe | **Primary and only engine** (ADR-0010) |
 | whisper.cpp (tiny/base) | No native streaming (sliding window) | Yes | 75 to 142 MB | Higher | 99 | We own | No for commands; latency and no partials |
 | Moonshine / Parakeet via sherpa-onnx | Chunked | Yes | 50 to 200 MB | Good | English-centric | We own | Candidates for a later accuracy upgrade through the same runtime |
 | Cloud ASR | Yes | No | 0 | Network bound, 300 ms+ added | Many | We own | No for the fast path; privacy cost |
@@ -201,7 +201,7 @@ Gating rule: KWS runs only on frames the VAD marks as speech. That is what keeps
 | | Variant A: self-contained (recommended) | Variant B: ultra-light |
 |---|---|---|
 | VAD + wake word | sherpa-onnx on ONNX Runtime | Same, or custom micro-runtime later |
-| ASR | sherpa-onnx Zipformer, downloaded | Android on-device SpeechRecognizer |
+| ASR | Android on-device SpeechRecognizer (ADR-0010) | Android on-device SpeechRecognizer |
 | Works without Google speech services | Yes | No |
 | Mic owner | Single (us) | Handoff to Google's process per utterance |
 | APK (arm64, estimate, to verify in spike) | 10 to 15 MB | 4 to 8 MB |
@@ -253,7 +253,7 @@ Room (SQLite) for sessions, tasks, steps and metrics; app-private files for scre
 | Build | AGP 9, Gradle version catalogs, R8 full mode, AAB with ABI splits (arm64-v8a primary, armeabi-v7a optional), resource shrinking, 16 KB page alignment | Size and Play requirements |
 | UI | Views + Material Components; accessibility overlay window | Smallest, fastest start |
 | Audio | `AudioRecord`, 16 kHz mono PCM16, `VOICE_RECOGNITION`, dedicated thread | Standard, well supported |
-| Speech | sherpa-onnx AAR (Silero VAD, Zipformer KWS, streaming Zipformer ASR) | One runtime, Apache-2.0, streaming |
+| Speech | sherpa-onnx AAR (Silero VAD, Zipformer KWS); Android on-device SpeechRecognizer for transcription (ADR-0010) | One runtime for detection; best available recognizer for text |
 | Command engine | Kotlin grammar + fuzzy target matcher | Deterministic, microsecond cost |
 | Planner | Provider-neutral interface; adapters for Claude, OpenAI, Gemini, OpenRouter; ModelRouter picks the model | User chooses provider, app chooses model; no vendor SDKs |
 | Feedback | System TTS + earcons | Zero size |
@@ -313,9 +313,7 @@ The APK contains code and the native speech runtime only. Everything heavy is a 
 | Module | Contents | Size (estimate, verify in spike) | Required |
 |---|---|---|---|
 | `core-speech` | Silero VAD + Zipformer keyword spotting model | ~6 MB | Yes |
-| `asr-en` | Streaming Zipformer int8, English | ~45 to 70 MB | Yes for the default engine; skipped if the user picks the Android on-device recognizer (Variant B) |
 | `asr-<lang>` | Additional language packs | 40 to 120 MB each | Optional |
-| `asr-en-hq` | Larger, more accurate English model | ~150 MB | Optional |
 | `tts-voices` | None; system TTS is used. Listed so the setup screen can deep-link to system voice downloads if none is installed offline | 0 | Informational |
 
 Setup flow: first launch -> explain what the app does and why it needs accessibility and the microphone -> module screen listing required and optional modules with sizes, total, and a Wi-Fi recommendation -> download with resume, progress in a Live Update notification, SHA-256 verification against a signed catalog -> accessibility and microphone permission steps -> pick provider and paste key -> choose wake phrase. The app is usable for local commands as soon as `core-speech` and an ASR engine are present. Missing optional modules appear as "download to enable" in settings.
@@ -600,7 +598,7 @@ At any point "stop" on a partial transcript sets the `CancellationToken`: in-fli
 | Stop to all activity halted | < 150 ms | same |
 | Cold start to listening | < 1.5 s | Macrobenchmark |
 | APK download size (arm64) | < 12 MB (models are first-launch modules) | `bundletool` or release APK size |
-| First-launch required download | `core-speech` + `asr-en` under 80 MB, resumable | ModuleManager logs |
+| First-launch required download | `core-speech` under 10 MB, resumable | ModuleManager logs |
 | History storage per agent step | < 100 KB without screenshot, < 300 KB with | HistoryStore metrics |
 | Retention job | Deletes a 7-day backlog in < 2 s, runs only when idle or charging | WorkManager logs |
 | Jank from accessibility events | 0 main-thread work > 4 ms per event | Perfetto |
@@ -750,7 +748,7 @@ Total to the first public release (Phases 0 to 6): roughly 21 weeks for one engi
 8. No audio or screenshot data leaves the device unless a complex command is being planned, and then only transcripts and pruned tree text (plus a screenshot when visual mode is on) go to the provider the user configured.
 9. Switching provider in settings and re-running the three showcase tasks works on all four providers with no code change; a wrong key is reported within 5 s by the validation call.
 10. Every agent step in the last 7 days is visible in the history viewer with its screenshot (if taken), reasoning summary, tool calls and verification result; a session older than the window disappears after the next retention run; a pinned session does not.
-11. The APK download for arm64 is at most 12 MB; a fresh install offers the module screen on first launch, downloads `core-speech` and `asr-en` with resume after an interrupted connection, verifies hashes, and refuses a tampered file.
+11. The APK download for arm64 is at most 12 MB; a fresh install offers the module screen on first launch, downloads `core-speech` with resume after an interrupted connection, verifies hashes, and refuses a tampered file.
 12. On an Android 16 device, the status bar chip and lock screen show the task state and step progress throughout the three showcase tasks, and Confirm and Deny from the notification work; on Android 14 the same text and actions appear in a standard progress notification.
 
 ---

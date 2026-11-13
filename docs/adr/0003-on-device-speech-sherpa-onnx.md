@@ -1,6 +1,6 @@
 # 0003: On-device speech with sherpa-onnx
 
-Status: Accepted
+Status: Accepted; the transcription part is superseded by ADR-0010
 Date: 2026-11-13
 
 ## Context
@@ -10,9 +10,11 @@ audio anywhere. Wake word must be user-chosen.
 
 ## Decision
 
-sherpa-onnx on ONNX Runtime for VAD (Silero), open-vocabulary keyword spotting
-(Zipformer) and streaming ASR (Zipformer int8). Models are downloaded modules.
-The Android SpeechRecognizer is a secondary engine behind the same interface.
+sherpa-onnx on ONNX Runtime for VAD (Silero) and open-vocabulary keyword spotting
+(Zipformer). Models are downloaded modules.
+
+Amended 2026-11-14: transcription no longer uses sherpa-onnx. The streaming Zipformer
+ASR was removed after device tests; Android's recognizer transcribes (ADR-0010).
 
 ## Consequences
 
