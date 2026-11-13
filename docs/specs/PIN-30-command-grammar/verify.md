@@ -32,6 +32,21 @@ Two device paths were used:
 | pins roll down | 1 | unmatched |
 | scroll down (prefix lost) | 1 | heard |
 
+## Maintainer voice run (2026-11-14)
+
+History of the maintainer's own speech: "pin open YouTube" ran (task 126); "tab search"
+was unmatched (tasks 127, 128); "Pin" then "scroll down" ran twice through arming
+(tasks 129, 130); "pin stop" ran (task 131).
+
+Defects found and fixed:
+- "scroll down" in WhatsApp switched to the next tab. The largest scrollable was the tab
+  `ViewPager`; it offers no "scroll down", and the code fell back to "scroll forward",
+  which on a pager means the next page. Now a container is used only when it moves in
+  the asked direction (`ScrollChoiceTest`, 6 cases), trying scrollables largest first.
+  Device: in WhatsApp "Pin scroll down" scrolled the chat list (rows changed, filter bar
+  scrolled away) and the pager stayed on Chats; Settings scroll down and up still work.
+- The recognizer wrote "tap" as "tab"; "tab" is now accepted (corpus lines added).
+
 ## Budgets
 
 | Budget | Target | Measured | How |
@@ -41,9 +56,8 @@ Two device paths were used:
 
 ## Not verified
 
-- A human voice. The phone's own speaker gave 5 of 10 recognised commands; the misses are
-  the recognizer merging "Pin scroll" into "pins grown". Whether a person sees the same
-  needs a run by the maintainer.
+- More human-voice runs: the maintainer's first run worked for open, scroll and stop; how
+  often the prefix is lost for a person is not measured yet.
 - p95 over 20 trials; only 5 runs reached dispatch.
 - "type <text>", "double tap", "long press", "show grid" and "tap number" on device; they
   are covered by unit tests and reuse the debug-tested actions.
