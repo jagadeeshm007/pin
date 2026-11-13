@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(make:*)",
+      "Bash(./gradlew:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git switch:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(adb devices:*)",
+      "Bash(adb shell dumpsys:*)",
+      "Bash(adb logcat:*)"
+    ],
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git commit --amend:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh release create:*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/*.jks)",
+      "Read(**/*.keystore)",
+      "Read(~/.gradle/gradle.properties)",
+      "Read(~/.ssh/**)"
+    ]
+  }
+}
