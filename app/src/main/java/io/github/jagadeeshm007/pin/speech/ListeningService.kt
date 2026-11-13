@@ -150,6 +150,7 @@ class ListeningService : Service() {
         var utteranceSamples = 0L
         var decodeNs = 0L
         var windows = 0
+        var peak = 0
         var speechWindows = 0
         var lastStatsAt = SystemClock.elapsedRealtime()
         try {
@@ -163,13 +164,15 @@ class ListeningService : Service() {
                     engine.cancel()
                     continue
                 }
+                for (v in pcm) peak = maxOf(peak, kotlin.math.abs(v.toInt()))
                 val window = FloatArray(n) { pcm[it] / PCM_SCALE }
                 val speech = engine.speechProbability(window) > VAD_THRESHOLD
                 windows++
                 if (speech) speechWindows++
                 val now = SystemClock.elapsedRealtime()
                 if (now - lastStatsAt >= STATS_EVERY_MS) {
-                    Log.d(TAG, "vad: $speechWindows of $windows windows were speech")
+                    Log.d(TAG, "vad: $speechWindows of $windows windows were speech, peak level $peak of 32767")
+                    peak = 0
                     windows = 0
                     speechWindows = 0
                     lastStatsAt = now

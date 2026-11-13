@@ -26,7 +26,12 @@ class SpeechEngine private constructor(private val vad: Vad, private val recogni
     /** Starts an utterance with [samples]; returns a new partial or null. */
     fun begin(samples: FloatArray): String? {
         stream?.release()
-        stream = recognizer.createStream()
+        stream = recognizer.createStream().also { fresh ->
+            // A fresh stream drops its first second or more (PIN-2); 1 s of silence first
+            // recovered "scroll down please" from "UL" (device test, PIN-21).
+            fresh.acceptWaveform(FloatArray(WARMUP_SAMPLES), SpeechSegmenter.SAMPLE_RATE)
+            while (recognizer.isReady(fresh)) recognizer.decode(fresh)
+        }
         lastPartial = ""
         return feed(samples)
     }
@@ -69,6 +74,7 @@ class SpeechEngine private constructor(private val vad: Vad, private val recogni
     companion object {
         private const val TAIL_SAMPLES = SpeechSegmenter.SAMPLE_RATE * 3 / 10
         private const val ASR_THREADS = 2
+        private const val WARMUP_SAMPLES = SpeechSegmenter.SAMPLE_RATE
 
         /** Model file names from the catalog (ADR-0008). */
         val REQUIRED = listOf(
