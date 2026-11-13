@@ -69,7 +69,8 @@ object CommandGrammar {
     private val TAP_DIGITS = Regex("(?:tap|click) (\\d+)")
     private val LONG_PRESS = Regex("long (?:press|click)(?: on)? (.+)")
     private val DOUBLE_TAP = Regex("double (?:tap|click)(?: on)? (.+)")
-    private val TAP = Regex("(?:tap|click|press|select)(?: on)? (.+)")
+    // "tab" is how the recognizer wrote "tap" for the maintainer (PIN-30 device run).
+    private val TAP = Regex("(?:tap|tab|click|press|select)(?: on)? (.+)")
     private val OPEN = Regex("(?:open|launch|start)(?: app)? (.+?)(?: app)?")
     private val TYPE = Regex("(?:type|write) .+")
     private val TYPED = Regex("(?i)\\b(?:type|write)\\b\\W*(.+)$")
