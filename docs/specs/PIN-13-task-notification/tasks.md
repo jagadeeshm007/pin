@@ -7,4 +7,4 @@ Plan: ./plan.md
 - [x] T3 [P] [AC-4] Confirmation broker and confirmer (test: `ConfirmationBrokerTest`)
 - [x] T4 [AC-2] [AC-5] [AC-6] Notifier, receiver, wiring, permission request (test: device check)
 - [x] T5 [AC-7] Persistent confirmation card in the overlay (test: device check)
-- [ ] T6 Debug commands and device verification
+- [x] T6 Debug commands and device verification
