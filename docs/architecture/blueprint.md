@@ -73,7 +73,7 @@ Google's own Voice Access app proves the category: wake-free voice control, "sho
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  Process: single app process (service + FGS + UI share it; no IPC)           │
+│  Processes: main (service, overlay, history) + :speech (ADR-0007)            │
 │                                                                              │
 │  ┌───────────────┐   ┌────────────────────────────────────────────────────┐  │
 │  │ Settings UI   │   │ VoiceAccessibilityService (AccessibilityService)   │  │
