@@ -4,6 +4,8 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import io.github.jagadeeshm007.pin.PinApp
+import io.github.jagadeeshm007.pin.command.AppCatalog
+import io.github.jagadeeshm007.pin.command.CommandRunner
 import io.github.jagadeeshm007.pin.device.DeviceProfileCollector
 import io.github.jagadeeshm007.pin.overlay.ConfirmCardController
 import io.github.jagadeeshm007.pin.overlay.OverlayController
@@ -33,6 +35,10 @@ class PinAccessibilityService : AccessibilityService() {
     var overlay: OverlayController? = null
         private set
 
+    /** Turns transcripts into commands; null while disconnected. Use on the main thread. */
+    var speechBridge: SpeechBridge? = null
+        private set
+
     private var confirmCard: ConfirmCardController? = null
     private val scope = MainScope()
 
@@ -44,7 +50,10 @@ class PinAccessibilityService : AccessibilityService() {
         scope.launch { broker.pending.collect { card.render(it) } }
         scope.launch { RetentionRunner.runWhileConnected(applicationContext as PinApp) }
         scope.launch { refreshProfile(applicationContext as PinApp) }
-        scope.launch { SpeechBridge(applicationContext as PinApp) { overlay }.run() }
+        val app = applicationContext as PinApp
+        val bridge = SpeechBridge(app, { overlay }, CommandRunner(this, app, AppCatalog.of(this)), scope)
+        speechBridge = bridge
+        scope.launch { bridge.run() }
         AccessibilityRegistry.attach(this)
     }
 
@@ -78,6 +87,7 @@ class PinAccessibilityService : AccessibilityService() {
         overlay = null
         confirmCard?.remove()
         confirmCard = null
+        speechBridge = null
         scope.cancel()
     }
 }

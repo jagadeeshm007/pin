@@ -213,7 +213,8 @@ class ListeningService : Service() {
                             Log.d(
                                 TAG,
                                 "utterance ${action.reason} audio=${utteranceAudioMs}ms " +
-                                    "wall=${SystemClock.elapsedRealtime() - utteranceStart}ms",
+                                    "wall=${SystemClock.elapsedRealtime() - utteranceStart}ms " +
+                                    "end at ${SystemClock.elapsedRealtime()}",
                             )
                             transcriber.end()
                         }
