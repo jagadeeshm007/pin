@@ -13,10 +13,14 @@ import io.github.jagadeeshm007.pin.action.TargetRef
 import io.github.jagadeeshm007.pin.core.screen.NodeFlag
 import io.github.jagadeeshm007.pin.core.screen.ScreenNode
 import io.github.jagadeeshm007.pin.core.screen.ScreenSnapshot
+import io.github.jagadeeshm007.pin.overlay.GridModel
+import io.github.jagadeeshm007.pin.overlay.NumberLabeler
+import io.github.jagadeeshm007.pin.overlay.OverlayState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
 /**
@@ -46,7 +50,7 @@ class DebugCommandReceiver : BroadcastReceiver() {
         val service = AccessibilityRegistry.service.value ?: return "error: accessibility service is off"
         val command = DebugCommand.parse(line) ?: return "error: cannot parse '$line'"
         val screen = AccessibilityScreenSource(service)
-        if (command == DebugCommand.Dump) return dump(screen.current())
+        val overlay = service.overlay ?: return "error: overlay not ready"
 
         val events = mutableListOf<ActionEvent>()
         val orchestrator = ActionOrchestrator(
@@ -55,20 +59,70 @@ class DebugCommandReceiver : BroadcastReceiver() {
             confirmer = { _, _ -> false },
             recorder = { events += it },
         )
-        val action = when (command) {
+        val action: DeviceAction = when (command) {
+            DebugCommand.Dump -> return dump(screen.current())
+
+            is DebugCommand.Overlay -> return onMain {
+                overlay.showState(command.state, command.detail)
+                "overlay: ${command.state}${command.detail?.let { " ($it)" } ?: ""}"
+            }
+
+            DebugCommand.Hide -> return onMain {
+                overlay.clearMarks()
+                overlay.showState(OverlayState.IDLE)
+                "overlay: hidden"
+            }
+
+            DebugCommand.Numbers -> {
+                val map = NumberLabeler().label(screen.current())
+                onMain { overlay.showNumbers(map) }
+                return "numbers: ${map.entries.size} shown\n" +
+                    map.entries.joinToString("\n") { "  ${it.number} -> node ${it.nodeId} ${it.role} ${it.bounds}" }
+            }
+
+            is DebugCommand.TapNumber -> {
+                val map = onMain { overlay.numbers } ?: return "error: no numbers shown"
+                val target = map.resolve(command.number, screen.current())
+                    ?: return "error: number ${command.number} was not shown or has moved"
+                onMain { overlay.clearMarks() }
+                DeviceAction.Tap(target)
+            }
+
+            DebugCommand.Grid -> {
+                val grid = GridModel(screen.current().windowBounds)
+                onMain { overlay.showGrid(grid) }
+                return "grid: ${grid.cells.size} cells over ${grid.area}"
+            }
+
+            is DebugCommand.GridZoom -> {
+                val grid = onMain { overlay.grid } ?: return "error: no grid shown"
+                val finer = grid.refine(command.number) ?: return "error: cell ${command.number} cannot be refined"
+                onMain { overlay.showGrid(finer) }
+                return "grid: ${finer.cells.size} cells over ${finer.area}"
+            }
+
+            is DebugCommand.GridPick -> {
+                val grid = onMain { overlay.grid } ?: return "error: no grid shown"
+                val cell = grid.cell(command.number) ?: return "error: no cell ${command.number}"
+                onMain { overlay.clearMarks() }
+                DeviceAction.Tap(TargetRef.Point(cell.center.first, cell.center.second))
+            }
+
             is DebugCommand.Direct -> command.action
 
             is DebugCommand.OnLabel -> resolve(command, screen.current())
                 ?: return "error: no node labelled '${command.label}'"
-
-            DebugCommand.Dump -> return "unreachable"
         }
+        onMain { overlay.showState(OverlayState.ACTING, action.javaClass.simpleName) }
         val started = System.nanoTime()
         val result = orchestrator.execute(action)
         val ms = (System.nanoTime() - started) / NANOS_PER_MS
+        onMain { overlay.showState(OverlayState.IDLE) }
         val trail = events.joinToString("\n") { "  ${describe(it)}" }
         return "action: $action\nresult: ${describeResult(result)}\nelapsed: $ms ms\nevents:\n$trail"
     }
+
+    private suspend fun <T> onMain(block: () -> T): T = withContext(Dispatchers.Main) { block() }
 
     private fun resolve(command: DebugCommand.OnLabel, screen: ScreenSnapshot): DeviceAction? {
         val wantEditable = command.kind == DebugCommand.Kind.TYPE

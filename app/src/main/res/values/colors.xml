@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Overlay colours. The overlay sits on top of any app, so it uses fixed high-contrast
+     colours rather than the app theme. -->
+<resources>
+    <color name="overlay_pill_background">#E6111418</color>
+    <color name="overlay_pill_text">#FFFFFFFF</color>
+    <color name="overlay_dot_neutral">#FF9AA0A6</color>
+    <color name="overlay_dot_active">#FF34A853</color>
+    <color name="overlay_dot_busy">#FF4285F4</color>
+    <color name="overlay_dot_attention">#FFFBBC04</color>
+    <color name="overlay_badge_background">#FFFFD54F</color>
+    <color name="overlay_badge_text">#FF000000</color>
+    <color name="overlay_badge_outline">#FF000000</color>
+    <color name="overlay_grid_line">#CCFFD54F</color>
+    <color name="overlay_grid_shade">#33000000</color>
+    <color name="overlay_grid_text">#FFFFFFFF</color>
+</resources>

@@ -8,4 +8,13 @@
     <string name="main_service_on">Accessibility service is on</string>
     <string name="main_service_off">Accessibility service is off</string>
     <string name="main_open_settings">Open accessibility settings</string>
+    <string name="overlay_idle">Idle</string>
+    <string name="overlay_listening">Listening</string>
+    <string name="overlay_heard">Heard</string>
+    <string name="overlay_thinking">Thinking</string>
+    <string name="overlay_acting">Acting</string>
+    <string name="overlay_confirm">Confirm?</string>
+    <string name="overlay_paused">Paused</string>
+    <string name="overlay_error">Something went wrong</string>
+    <string name="overlay_with_detail">%1$s: %2$s</string>
 </resources>

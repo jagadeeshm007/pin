@@ -3,6 +3,7 @@ package io.github.jagadeeshm007.pin.accessibility
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
+import io.github.jagadeeshm007.pin.overlay.OverlayController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,8 +20,13 @@ class PinAccessibilityService : AccessibilityService() {
     /** Increases on every window or content event the service receives. */
     val contentVersion: StateFlow<Long> = version.asStateFlow()
 
+    /** The overlay window; use only on the main thread. Null while disconnected. */
+    var overlay: OverlayController? = null
+        private set
+
     override fun onServiceConnected() {
         super.onServiceConnected()
+        overlay = OverlayController(this)
         AccessibilityRegistry.attach(this)
     }
 
@@ -31,13 +37,19 @@ class PinAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onUnbind(intent: Intent?): Boolean {
-        AccessibilityRegistry.detach(this)
+        disconnect()
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
-        AccessibilityRegistry.detach(this)
+        disconnect()
         super.onDestroy()
+    }
+
+    private fun disconnect() {
+        AccessibilityRegistry.detach(this)
+        overlay?.remove()
+        overlay = null
     }
 }
 
