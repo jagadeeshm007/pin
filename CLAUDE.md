@@ -13,3 +13,6 @@
 ## Things Claude gets wrong here
 
 Add a line each time a mistake repeats; delete lines that stop applying.
+
+- Piping `make check` into `grep` or `tail` hides its exit code. Run gates with
+  `set -o pipefail`, or commit in a separate command after reading the result.

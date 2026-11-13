@@ -36,5 +36,5 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           git rev-parse --verify origin/${{ github.base_ref }} >/dev/null
-          bad=$(git log --no-merges --format=%s origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }} | grep -Ev '^(feat|fix|chore|docs|test|refactor|perf|build|ci|spike)(\([a-z0-9-]+\))?: .+ \[PIN-[0-9]+\]$' || true)
+          bad=$(git log --no-merges --format=%s origin/${{ github.base_ref }}..${{ github.event.pull_request.head.sha }} | grep -Ev '^(feat|fix|chore|docs|style|test|refactor|perf|build|ci|spike)(\([a-z0-9-]+\))?: .+ \[PIN-[0-9]+\]$' || true)
           [ -z "$bad" ] || { echo "Commit subjects without the required form:"; echo "$bad"; exit 1; }
