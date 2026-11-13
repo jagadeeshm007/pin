@@ -3,6 +3,7 @@ package io.github.jagadeeshm007.pin.debug
 import io.github.jagadeeshm007.pin.action.DeviceAction
 import io.github.jagadeeshm007.pin.action.Direction
 import io.github.jagadeeshm007.pin.action.GlobalNav
+import io.github.jagadeeshm007.pin.overlay.OverlayState
 
 /** A command typed over adb in debug builds. Labels are resolved against the screen later. */
 sealed interface DebugCommand {
@@ -17,6 +18,27 @@ sealed interface DebugCommand {
 
     enum class Kind { TAP, DOUBLE_TAP, LONG_PRESS, TYPE }
 
+    /** Shows the pill in [state], with an optional detail. */
+    data class Overlay(val state: OverlayState, val detail: String?) : DebugCommand
+
+    /** Hides the pill and any numbers or grid. */
+    data object Hide : DebugCommand
+
+    /** Shows number badges on the current screen. */
+    data object Numbers : DebugCommand
+
+    /** Taps the node shown with [number]. */
+    data class TapNumber(val number: Int) : DebugCommand
+
+    /** Shows a 3 by 3 grid over the window. */
+    data object Grid : DebugCommand
+
+    /** Taps the centre of grid cell [number]. */
+    data class GridPick(val number: Int) : DebugCommand
+
+    /** Replaces the grid with a finer grid over cell [number]. */
+    data class GridZoom(val number: Int) : DebugCommand
+
     companion object {
         /** Parses one command line; returns null with nothing to run. */
         fun parse(line: String): DebugCommand? {
@@ -25,6 +47,20 @@ sealed interface DebugCommand {
             val rest = trimmed.substringAfter(' ', "").trim()
             return when (verb) {
                 "dump" -> Dump
+
+                "overlay" -> overlay(rest)
+
+                "hide" -> Hide
+
+                "numbers" -> Numbers
+
+                "tapnum" -> rest.toIntOrNull()?.let { TapNumber(it) }
+
+                "grid" -> Grid
+
+                "gridpick" -> rest.toIntOrNull()?.let { GridPick(it) }
+
+                "gridzoom" -> rest.toIntOrNull()?.let { GridZoom(it) }
 
                 "tap" -> label(Kind.TAP, rest)
 
@@ -67,6 +103,13 @@ sealed interface DebugCommand {
             val text = rest.substringAfter('=', "")
             if (label.isEmpty() || text.isEmpty()) return null
             return OnLabel(Kind.TYPE, label, text, submit)
+        }
+
+        private fun overlay(rest: String): DebugCommand? {
+            val name = rest.substringBefore(' ')
+            val state = OverlayState.entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: return null
+            val detail = rest.substringAfter(' ', "").trim().ifEmpty { null }
+            return Overlay(state, detail)
         }
 
         private fun direction(rest: String): Direction? = Direction.entries.firstOrNull { it.name.equals(rest, true) }

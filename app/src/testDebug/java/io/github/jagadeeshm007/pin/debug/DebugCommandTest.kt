@@ -4,6 +4,7 @@ import io.github.jagadeeshm007.pin.action.DeviceAction
 import io.github.jagadeeshm007.pin.action.Direction
 import io.github.jagadeeshm007.pin.action.GlobalNav
 import io.github.jagadeeshm007.pin.debug.DebugCommand.Kind
+import io.github.jagadeeshm007.pin.overlay.OverlayState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -30,6 +31,28 @@ class DebugCommandTest {
             "quicksettings" to DebugCommand.Direct(DeviceAction.Global(GlobalNav.QUICK_SETTINGS)),
         )
         cases.forEach { (line, expected) -> assertEquals(expected, DebugCommand.parse(line), "for '$line'") }
+    }
+
+    @Test
+    fun parsesOverlayCommands() {
+        val cases = mapOf(
+            "overlay listening" to DebugCommand.Overlay(OverlayState.LISTENING, null),
+            "overlay heard scroll down" to DebugCommand.Overlay(OverlayState.HEARD, "scroll down"),
+            "overlay IDLE" to DebugCommand.Overlay(OverlayState.IDLE, null),
+            "hide" to DebugCommand.Hide,
+            "numbers" to DebugCommand.Numbers,
+            "tapnum 12" to DebugCommand.TapNumber(12),
+            "grid" to DebugCommand.Grid,
+            "gridpick 5" to DebugCommand.GridPick(5),
+            "gridzoom 3" to DebugCommand.GridZoom(3),
+        )
+        cases.forEach { (line, expected) -> assertEquals(expected, DebugCommand.parse(line), "for '$line'") }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["overlay", "overlay dancing", "tapnum", "tapnum x", "gridpick", "gridzoom 0x"])
+    fun rejectsBadOverlayCommands(line: String) {
+        assertNull(DebugCommand.parse(line))
     }
 
     @ParameterizedTest
