@@ -22,7 +22,7 @@ plan, build, verify, review, done.
 | --- | --- | --- |
 | PIN-10 | AccessibilityService, screen snapshots, device controller, debug harness | review |
 | PIN-11 | Action registry and orchestrator with verification and cancellation | review |
-| PIN-12 | Overlay: states, numbers, grid | todo |
+| PIN-12 | Overlay: states, numbers, grid | review |
 | PIN-13 | Task notification: Live Update with legacy fallback | todo |
 | PIN-14 | History store schema, file layout, retention job | todo |
 
