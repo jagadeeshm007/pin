@@ -2,6 +2,7 @@ package io.github.jagadeeshm007.pin.overlay
 
 import android.accessibilityservice.AccessibilityService
 import android.graphics.PixelFormat
+import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.WindowManager
 import androidx.annotation.MainThread
@@ -70,10 +71,11 @@ class OverlayController(private val service: AccessibilityService) {
         view = null
     }
 
-    private fun ensureView(): OverlayView = view ?: OverlayView(service).also {
-        windowManager.addView(it, layoutParams())
-        view = it
-    }
+    private fun ensureView(): OverlayView =
+        view ?: OverlayView(ContextThemeWrapper(service, R.style.Theme_Pin_Overlay)).also {
+            windowManager.addView(it, layoutParams())
+            view = it
+        }
 
     private fun removeIfEmpty() {
         if (view?.hasContent == false) remove()

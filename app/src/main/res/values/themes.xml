@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Pin" parent="Theme.Material3.DayNight.NoActionBar" />
+
+    <!-- The overlay draws its own colours. A dark theme with force-dark off stops the
+         system inverting the window (seen on Android 17). -->
+    <style name="Theme.Pin.Overlay" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:isLightTheme">false</item>
+    </style>
 </resources>
