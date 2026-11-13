@@ -20,7 +20,7 @@ plan, build, verify, review, done.
 
 | Id | Task | Status |
 | --- | --- | --- |
-| PIN-10 | AccessibilityService, screen model snapshot, fixture app | todo |
+| PIN-10 | AccessibilityService, screen snapshots, device controller, debug harness | review |
 | PIN-11 | Action registry and orchestrator with verification and cancellation | review |
 | PIN-12 | Overlay: states, numbers, grid | todo |
 | PIN-13 | Task notification: Live Update with legacy fallback | todo |
