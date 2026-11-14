@@ -69,6 +69,16 @@ class IntentRouterTest {
     }
 
     @Test
+    fun anAskedQuestionTakesTheNextUtteranceWithoutThePrefix() {
+        // "click story" showed numbers; the user answered "click one" (device report, PIN-31).
+        router.arm(15_000)
+        assertEquals(Route.Run(Command.PickNumber(1), "one", early = false), router.onFinal("one"))
+        router.arm(15_000)
+        now = 15_001
+        assertEquals(Route.Heard("one"), router.onFinal("one"))
+    }
+
+    @Test
     fun aNewUtteranceResetsWhenTheFinalWasLost() {
         // The recognizer can fail after an early commit and send no final.
         router.onPartial("pin go back")

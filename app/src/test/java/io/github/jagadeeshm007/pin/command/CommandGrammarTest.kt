@@ -45,6 +45,8 @@ class CommandGrammarTest {
         assertEquals(Command.PickNumber(3), CommandGrammar.parse("three"))
         assertEquals(Command.PickNumber(12), CommandGrammar.parse("12."))
         assertEquals(Command.TapNumber(7), CommandGrammar.parse("number seven"))
+        assertEquals(Command.TapNumber(1), CommandGrammar.parse("click one"))
+        assertEquals(Command.TapNumber(2), CommandGrammar.parse("tap two please"))
         assertFalse(CommandGrammar.parse("three")!!.earlyCommit)
         assertNull(CommandGrammar.parse("three cats"))
     }

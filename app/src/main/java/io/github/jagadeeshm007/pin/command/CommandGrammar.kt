@@ -22,7 +22,7 @@ object CommandGrammar {
             )
         }
         NUMBER.matchEntire(s)?.let { m -> number(m.groupValues[1])?.let { return Command.TapNumber(it) } }
-        TAP_DIGITS.matchEntire(s)?.let { m -> return Command.TapNumber(m.groupValues[1].toInt()) }
+        TAP_NUMBER.matchEntire(s)?.let { m -> number(m.groupValues[1])?.let { return Command.TapNumber(it) } }
         number(s)?.let { return Command.PickNumber(it) }
         LONG_PRESS.matchEntire(s)?.let { return Command.OnLabel(Command.LabelKind.LONG_PRESS, it.groupValues[1]) }
         DOUBLE_TAP.matchEntire(s)?.let { return Command.OnLabel(Command.LabelKind.DOUBLE_TAP, it.groupValues[1]) }
@@ -68,7 +68,7 @@ object CommandGrammar {
     )
     private val DIRECTED = Regex("(scroll|swipe) (up|down|left|right)")
     private val NUMBER = Regex("(?:(?:tap|click) )?number (\\w+)")
-    private val TAP_DIGITS = Regex("(?:tap|click) (\\d+)")
+    private val TAP_NUMBER = Regex("(?:tap|tab|click|press) (\\w+)")
     private val LONG_PRESS = Regex("long (?:press|click)(?: on)? (.+)")
     private val DOUBLE_TAP = Regex("double (?:tap|click)(?: on)? (.+)")
 

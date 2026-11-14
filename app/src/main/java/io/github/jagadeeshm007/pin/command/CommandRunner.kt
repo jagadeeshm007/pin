@@ -52,8 +52,8 @@ class CommandRunner(
     /** What a run ended as, for the history task. */
     private data class Outcome(val status: String, val summary: String, val done: Boolean)
 
-    /** Runs [command], heard as [text], as a task of [sessionId]. */
-    suspend fun run(command: Command, text: String, sessionId: Long) = oneAtATime.withLock {
+    /** Runs [command], heard as [text], as a task of [sessionId]; returns the task status. */
+    suspend fun run(command: Command, text: String, sessionId: Long): String = oneAtATime.withLock {
         Log.d(TAG, "dispatch ${command.javaClass.simpleName} at ${SystemClock.elapsedRealtime()}")
         val task = app.history.startTask(sessionId, text, ROUTE)
         val outcome = try {
@@ -68,6 +68,7 @@ class CommandRunner(
         val tell = outcome.status in TOLD
         service.overlay?.showState(if (tell) OverlayState.HEARD else OverlayState.IDLE, outcome.summary.takeIf { tell })
         app.notifier.show(TaskStatus(if (outcome.done) TaskPhase.DONE else TaskPhase.FAILED, outcome.summary))
+        outcome.status
     }
 
     private suspend fun untilStopped(block: suspend () -> Outcome): Outcome = coroutineScope {
