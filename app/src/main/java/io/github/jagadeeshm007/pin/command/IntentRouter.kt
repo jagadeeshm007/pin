@@ -27,7 +27,12 @@ class IntentRouter(private val clock: () -> Long, private val armMs: Long = ARM_
 
     private var lastPartial: Command? = null
     private var committed: String? = null
-    private var armedAt: Long? = null
+    private var armedUntil: Long? = null
+
+    /** The next utterance within [forMs] is a command even without the prefix (an answer to "Say a number"). */
+    fun arm(forMs: Long) {
+        armedUntil = clock() + forMs
+    }
 
     /** Handles a partial transcript of the utterance in progress. */
     fun onPartial(text: String): Route {
@@ -53,18 +58,18 @@ class IntentRouter(private val clock: () -> Long, private val armMs: Long = ARM_
         val armed = armed()
         committed = null
         lastPartial = null
-        armedAt = null
+        armedUntil = null
         if (wasCommitted) return Route.AlreadyRun
         val body = body(text, armed) ?: return Route.Heard(text)
         if (body.isEmpty()) {
-            armedAt = clock()
+            arm(armMs)
             return Route.Armed
         }
         val command = CommandGrammar.parse(body) ?: return Route.Unmatched(text)
         return Route.Run(command, text, early = false)
     }
 
-    private fun armed(): Boolean = armedAt?.let { clock() - it <= armMs } == true
+    private fun armed(): Boolean = armedUntil?.let { clock() <= it } == true
 
     /** The command part of [text]: after the prefix, or all of it when armed; else null. */
     private fun body(text: String, armed: Boolean): String? = CommandPrefix.strip(text) ?: text.takeIf { armed }

@@ -60,15 +60,22 @@ class SpeechBridge(
                 // Stop must not wait behind the run it is meant to stop.
                 if (route.command == Command.Stop) TaskControl.requestStop()
                 val session = session()
-                scope.launch { runner.run(route.command, route.text, session) }
+                scope.launch {
+                    // After "Say a number" the answer needs no prefix (PIN-31 device report).
+                    if (runner.run(route.command, route.text, session) == CommandRunner.AMBIGUOUS) {
+                        router.arm(CommandRunner.ASK_WINDOW_MS)
+                    }
+                }
             }
 
             is Route.Unmatched -> {
+                runner.dismissAsk()
                 overlay()?.showState(OverlayState.HEARD, app.getString(R.string.command_not_a_command))
                 record(route.text, CommandRunner.UNMATCHED, final)
             }
 
             is Route.Heard -> {
+                runner.dismissAsk()
                 app.notifier.show(TaskStatus(TaskPhase.HEARD, route.text))
                 record(route.text, "heard", final)
             }

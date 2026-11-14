@@ -32,7 +32,12 @@ class NumberLabeler {
         val leaves = candidates.filter { outer ->
             candidates.none { inner -> inner !== outer && contains(outer, inner) }
         }
-        val ordered = leaves.sortedWith(compareBy({ it.bounds.top }, { it.bounds.left })).take(MAX_LABELS)
+        return labelNodes(leaves)
+    }
+
+    /** Numbers exactly [nodes], top to bottom then left to right (ambiguous labels, PIN-31). */
+    fun labelNodes(nodes: List<ScreenNode>): NumberMap {
+        val ordered = nodes.sortedWith(compareBy({ it.bounds.top }, { it.bounds.left })).take(MAX_LABELS)
         return NumberMap(ordered.mapIndexed { i, n -> NumberedNode(i + 1, n.id, n.role, n.bounds) })
     }
 

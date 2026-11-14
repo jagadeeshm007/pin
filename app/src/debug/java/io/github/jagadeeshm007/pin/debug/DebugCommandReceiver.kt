@@ -235,8 +235,16 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
             is DebugCommand.Direct -> command.action
 
-            is DebugCommand.OnLabel -> resolve(command, screen.current())
-                ?: return "error: no node labelled '${command.label}'"
+            is DebugCommand.OnLabel -> when (val r = resolve(command, screen.current())) {
+                is Resolved.Action -> r.action
+
+                is Resolved.Ambiguous -> {
+                    onMain { overlay.showNumbers(NumberLabeler().labelNodes(r.nodes)) }
+                    return "ambiguous: ${r.nodes.size} nodes fit '${command.label}'; numbers shown"
+                }
+
+                Resolved.Nothing -> return "error: nothing like '${command.label}' on screen"
+            }
         }
         onMain {
             overlay.showState(OverlayState.ACTING, action.javaClass.simpleName)
@@ -316,16 +324,30 @@ class DebugCommandReceiver : BroadcastReceiver() {
 
     private suspend fun <T> onMain(block: () -> T): T = withContext(Dispatchers.Main) { block() }
 
-    private fun resolve(command: DebugCommand.OnLabel, screen: ScreenSnapshot): DeviceAction? {
-        val node = LabelResolver.find(screen, command.label, editable = command.kind == DebugCommand.Kind.TYPE)
-            ?: return null
-        val target = TargetRef.Node(node.id)
-        return when (command.kind) {
-            DebugCommand.Kind.TAP -> DeviceAction.Tap(target)
-            DebugCommand.Kind.DOUBLE_TAP -> DeviceAction.DoubleTap(target)
-            DebugCommand.Kind.LONG_PRESS -> DeviceAction.LongPress(target)
-            DebugCommand.Kind.TYPE -> DeviceAction.TypeText(node.id, command.text, command.submit)
+    private sealed interface Resolved {
+        data class Action(val action: DeviceAction) : Resolved
+
+        data class Ambiguous(val nodes: List<ScreenNode>) : Resolved
+
+        data object Nothing : Resolved
+    }
+
+    private fun resolve(command: DebugCommand.OnLabel, screen: ScreenSnapshot): Resolved {
+        val editable = command.kind == DebugCommand.Kind.TYPE
+        val node = when (val r = LabelResolver.resolve(screen, command.label, editable)) {
+            is LabelResolver.Resolution.One -> r.node
+            is LabelResolver.Resolution.Many -> return Resolved.Ambiguous(r.nodes)
+            LabelResolver.Resolution.None -> return Resolved.Nothing
         }
+        val target = TargetRef.Node(node.id)
+        return Resolved.Action(
+            when (command.kind) {
+                DebugCommand.Kind.TAP -> DeviceAction.Tap(target)
+                DebugCommand.Kind.DOUBLE_TAP -> DeviceAction.DoubleTap(target)
+                DebugCommand.Kind.LONG_PRESS -> DeviceAction.LongPress(target)
+                DebugCommand.Kind.TYPE -> DeviceAction.TypeText(node.id, command.text, command.submit)
+            },
+        )
     }
 
     private fun dump(screen: ScreenSnapshot): String {

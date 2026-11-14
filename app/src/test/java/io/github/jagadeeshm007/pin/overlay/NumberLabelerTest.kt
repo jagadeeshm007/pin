@@ -34,6 +34,14 @@ class NumberLabelerTest {
     }
 
     @Test
+    fun labelNodesNumbersJustTheGivenNodesInScreenOrder() {
+        val a = node(1, Bounds(0, 500, 100, 600), NodeFlag.CLICKABLE)
+        val b = node(2, Bounds(0, 100, 100, 200), NodeFlag.CLICKABLE)
+        val map = NumberLabeler().labelNodes(listOf(a, b))
+        assertEquals(listOf(2 to 1, 1 to 2), map.entries.map { it.nodeId to it.number })
+    }
+
+    @Test
     fun containerHoldingAnotherCandidateIsSkipped() {
         val nodes = listOf(
             node(1, Bounds(0, 300, 1080, 900), NodeFlag.CLICKABLE),

@@ -11,6 +11,7 @@ import io.github.jagadeeshm007.pin.action.ActionOrchestrator
 import io.github.jagadeeshm007.pin.action.ActionResult
 import io.github.jagadeeshm007.pin.action.DeviceAction
 import io.github.jagadeeshm007.pin.action.TargetRef
+import io.github.jagadeeshm007.pin.core.screen.ScreenNode
 import io.github.jagadeeshm007.pin.device.QuirkObserver
 import io.github.jagadeeshm007.pin.notification.BrokerConfirmer
 import io.github.jagadeeshm007.pin.notification.TaskControl
@@ -45,11 +46,14 @@ class CommandRunner(
     private val quirks = QuirkObserver(app.quirks)
     private val oneAtATime = Mutex()
 
+    /** When numbers were shown for an ambiguous label; a bare number answers within [ASK_WINDOW_MS]. */
+    private var askedAt = 0L
+
     /** What a run ended as, for the history task. */
     private data class Outcome(val status: String, val summary: String, val done: Boolean)
 
-    /** Runs [command], heard as [text], as a task of [sessionId]. */
-    suspend fun run(command: Command, text: String, sessionId: Long) = oneAtATime.withLock {
+    /** Runs [command], heard as [text], as a task of [sessionId]; returns the task status. */
+    suspend fun run(command: Command, text: String, sessionId: Long): String = oneAtATime.withLock {
         Log.d(TAG, "dispatch ${command.javaClass.simpleName} at ${SystemClock.elapsedRealtime()}")
         val task = app.history.startTask(sessionId, text, ROUTE)
         val outcome = try {
@@ -60,17 +64,11 @@ class CommandRunner(
         }
         app.history.endTask(task, outcome.status, outcome.summary)
         app.profiles.saveQuirks(app.quirks)
-        service.overlay?.showState(
-            if (outcome.status ==
-                UNMATCHED
-            ) {
-                OverlayState.HEARD
-            } else {
-                OverlayState.IDLE
-            },
-            outcome.summary.takeIf { outcome.status == UNMATCHED },
-        )
+        // Outcomes the user must hear about stay on the pill; success returns to idle.
+        val tell = outcome.status in TOLD
+        service.overlay?.showState(if (tell) OverlayState.HEARD else OverlayState.IDLE, outcome.summary.takeIf { tell })
         app.notifier.show(TaskStatus(if (outcome.done) TaskPhase.DONE else TaskPhase.FAILED, outcome.summary))
+        outcome.status
     }
 
     private suspend fun untilStopped(block: suspend () -> Outcome): Outcome = coroutineScope {
@@ -90,11 +88,23 @@ class CommandRunner(
     }
 
     private suspend fun perform(command: Command, task: Long): Outcome {
+        if (command !is Command.PickNumber && command !is Command.TapNumber) forgetAsk()
         marks(command)?.let { return it }
         val action = when (command) {
             is Command.Act -> command.action
 
-            is Command.OnLabel -> onLabel(command) ?: return failed(text(R.string.command_no_label, command.label))
+            is Command.OnLabel -> when (val found = onLabel(command)) {
+                is Found.Action -> found.action
+                is Found.Several -> return ask(found.nodes)
+                Found.Nothing -> return failed(text(R.string.command_no_label, command.label))
+            }
+
+            is Command.PickNumber -> {
+                val fresh = SystemClock.elapsedRealtime() - askedAt <= ASK_WINDOW_MS
+                val target = numbered(command.number).takeIf { fresh }
+                    ?: return failed(text(R.string.command_no_numbers))
+                DeviceAction.Tap(target)
+            }
 
             is Command.TypeText -> {
                 val field = LabelResolver.inputField(screen.current()) ?: return failed(text(R.string.command_no_field))
@@ -147,14 +157,45 @@ class CommandRunner(
 
     private fun text(id: Int, vararg args: Any): String = service.getString(id, *args)
 
-    private suspend fun onLabel(command: Command.OnLabel): DeviceAction? {
-        val node = LabelResolver.find(screen.current(), command.label) ?: return null
-        val target = TargetRef.Node(node.id)
-        return when (command.kind) {
-            Command.LabelKind.TAP -> DeviceAction.Tap(target)
-            Command.LabelKind.LONG_PRESS -> DeviceAction.LongPress(target)
-            Command.LabelKind.DOUBLE_TAP -> DeviceAction.DoubleTap(target)
+    private sealed interface Found {
+        data class Action(val action: DeviceAction) : Found
+
+        data class Several(val nodes: List<ScreenNode>) : Found
+
+        data object Nothing : Found
+    }
+
+    private suspend fun onLabel(command: Command.OnLabel): Found {
+        val node = when (val r = LabelResolver.resolve(screen.current(), command.label)) {
+            is LabelResolver.Resolution.One -> r.node
+            is LabelResolver.Resolution.Many -> return Found.Several(r.nodes)
+            LabelResolver.Resolution.None -> return Found.Nothing
         }
+        val target = TargetRef.Node(node.id)
+        return Found.Action(
+            when (command.kind) {
+                Command.LabelKind.TAP -> DeviceAction.Tap(target)
+                Command.LabelKind.LONG_PRESS -> DeviceAction.LongPress(target)
+                Command.LabelKind.DOUBLE_TAP -> DeviceAction.DoubleTap(target)
+            },
+        )
+    }
+
+    /** Several nodes fit: number just those and ask (spec PIN-31 AC-2). */
+    private fun ask(nodes: List<ScreenNode>): Outcome {
+        service.overlay?.showNumbers(NumberLabeler().labelNodes(nodes))
+        askedAt = SystemClock.elapsedRealtime()
+        return Outcome(AMBIGUOUS, text(R.string.command_say_a_number), done = false)
+    }
+
+    /** Speech that is not an answer ends the question and clears its numbers. Main thread. */
+    fun dismissAsk() = forgetAsk()
+
+    /** Any command other than a number ends the question and clears its numbers. */
+    private fun forgetAsk() {
+        if (askedAt == 0L) return
+        askedAt = 0L
+        service.overlay?.clearMarks()
     }
 
     /** A cell of the shown grid, or a shown number; clears the marks when found. */
@@ -195,6 +236,9 @@ class CommandRunner(
     companion object {
         const val ROUTE = "local"
         const val UNMATCHED = "unmatched"
+        const val AMBIGUOUS = "ambiguous"
+        const val ASK_WINDOW_MS = 15_000L
+        private val TOLD = setOf(UNMATCHED, AMBIGUOUS, "failed")
         private const val TAG = "PinCommand"
     }
 }
