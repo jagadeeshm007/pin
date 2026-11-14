@@ -1,6 +1,6 @@
 # PIN-31: Fuzzy target resolution and numbers fallback
 
-Status: Draft
+Status: Approved (maintainer, plan approval 2026-11-14)
 Owner: maintainer
 Roadmap phase: 3
 Blueprint sections: 6.1 (overlay), 6.3 (target resolution)
@@ -73,5 +73,4 @@ and the sensitivity gate.
 
 ## Open questions
 
-- Q1: should a tie prefer the node nearest the top of the screen instead of asking?
-  Proposed: no, ask with numbers; guessing is what PIN-10 found dangerous.
+- Q1 (answered 2026-11-14 with the plan): a tie asks with numbers; it never guesses.
