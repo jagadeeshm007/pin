@@ -27,6 +27,22 @@ filter" out of seven chips and "Voice search" over "Search YouTube", the guesses
 rule was meant to avoid. The tiebreak is now the share of the label the spoken words
 cover; an equal share asks. Spec and plan were updated before T1 was committed.
 
+## Maintainer voice run (2026-11-14) and fixes
+
+"click story" (Instagram) showed numbers and asked; the answer "click one" was recorded as
+plain speech (task 240 `heard`) and the numbers stayed. Two causes, both fixed on this
+branch:
+- The answer still needed the "Pin" prefix. After an `ambiguous` outcome the router is now
+  armed for the 15 s window, so the next utterance counts as the answer
+  (`IntentRouterTest.anAskedQuestionTakesTheNextUtteranceWithoutThePrefix`).
+- "click one" with a number word parsed as a label tap; "tap", "tab", "click" or "press"
+  plus a number word is now `TapNumber` (grammar test and corpus lines).
+- Speech that is not an answer ("is it raining") now clears the numbers as the spec says.
+
+Device, WhatsApp chips: "Pin tap filter" then "click one" selected All (task 253); again
+then "two" selected Unread (255); again then "three" selected Favourites (262); again then
+"is it raining": `tapnum 99` went from "number 99 was not shown" to "no numbers shown".
+
 ## Budgets
 
 | Budget | Target | Measured | How |
@@ -38,5 +54,5 @@ cover; an equal share asks. Spec and plan were updated before T1 was committed.
 - Earlier in the same run four taps failed because Settings was scrolled and YouTube was
   on a video page, so the labels were not on screen; the resolver was right. A spoken
   label for something off screen still fails rather than scrolling to find it.
-- A human voice saying the ambiguous flow end to end ("Pin tap filter", then "Pin two").
+- The maintainer's own voice through the fixed flow ("click story", then "one").
 - Long press and double tap through the fuzzy resolver on device (same code path as tap).

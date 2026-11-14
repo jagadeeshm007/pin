@@ -69,11 +69,13 @@ class SpeechBridge(
             }
 
             is Route.Unmatched -> {
+                runner.dismissAsk()
                 overlay()?.showState(OverlayState.HEARD, app.getString(R.string.command_not_a_command))
                 record(route.text, CommandRunner.UNMATCHED, final)
             }
 
             is Route.Heard -> {
+                runner.dismissAsk()
                 app.notifier.show(TaskStatus(TaskPhase.HEARD, route.text))
                 record(route.text, "heard", final)
             }

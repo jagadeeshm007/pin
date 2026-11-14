@@ -188,6 +188,9 @@ class CommandRunner(
         return Outcome(AMBIGUOUS, text(R.string.command_say_a_number), done = false)
     }
 
+    /** Speech that is not an answer ends the question and clears its numbers. Main thread. */
+    fun dismissAsk() = forgetAsk()
+
     /** Any command other than a number ends the question and clears its numbers. */
     private fun forgetAsk() {
         if (askedAt == 0L) return
