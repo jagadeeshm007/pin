@@ -34,10 +34,13 @@ of these ends as "Nothing labelled ... on screen" and the user has no way forwar
        distance (1 for words up to 4 letters, 2 above), to absorb recognizer slips
        ("notifcations");
     No match by substring inside a word (the "Voice search" lesson from PIN-10 still
-    holds: "search" must be a whole word, and a shorter label wins over a longer one).
-  - One best candidate runs. Two or more candidates at the same tier with no single
-    shortest label is a tie: Pin shows numbers on just those candidates, says "Say a
-    number" on the overlay, and records the task as `ambiguous`.
+    holds: "search" must be a whole word). "&" in a label reads as "and".
+  - Inside a tier the label whose words the spoken words cover most wins ("unread
+    filter" covers 2 of 3 words of "Unread filter, , unselected"). One best candidate
+    runs. An equal share is a tie: Pin shows numbers on just those candidates, says
+    "Say a number" on the overlay, and records the task as `ambiguous`. So "search" on
+    YouTube's search page (Search YouTube, Voice search, Clear search) asks, and never
+    opens the microphone by guess.
   - A bare number after the prefix ("Pin, three", "Pin, 3") taps that number while
     numbers are shown, for 15 s after they appeared.
   - No candidate: overlay "Nothing like '<label>' on screen", task `failed`, nothing

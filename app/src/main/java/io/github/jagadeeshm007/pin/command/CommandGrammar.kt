@@ -32,7 +32,8 @@ object CommandGrammar {
     }
 
     /** Lowercase words separated by single spaces; punctuation becomes a space. */
-    fun normalize(text: String): String = text.lowercase().replace(NON_WORD, " ").trim().replace(SPACES, " ")
+    fun normalize(text: String): String =
+        text.lowercase().replace("&", " and ").replace(NON_WORD, " ").trim().replace(SPACES, " ")
 
     private fun clean(normalized: String): String {
         var words = normalized.split(' ').filter { it.isNotEmpty() && it !in DROPPED }

@@ -6,7 +6,7 @@ Spec: ./spec.md
 
 | File | Change | Test |
 | --- | --- | --- |
-| `command/LabelResolver.kt` | `resolve(screen, spoken, editable)` returns `One(node, tier)`, `Many(nodes)` or `None`. Candidates: labelled nodes that are actionable or a labelled child of an actionable parent; never password fields. Tier 1 exact normalised label; tier 2 spoken words as whole words in order in the label; tier 3 every spoken word within a bounded edit distance of a label word. Shortest label wins inside a tier; a length tie is `Many`. | `LabelResolverTest`, `LabelFixtureTest` over `label-fixtures.tsv` (40+ real-label cases), timing on 200 nodes |
+| `command/LabelResolver.kt` | `resolve(screen, spoken, editable)` returns `One(node, tier)`, `Many(nodes)` or `None`. Candidates: labelled nodes that are actionable or a labelled child of an actionable parent; never password fields. Tier 1 exact normalised label; tier 2 spoken words as whole words in order in the label; tier 3 every spoken word within a bounded edit distance of a label word. Inside a tier the label with the fewest words (the one the spoken words cover most) wins; an equal share is `Many`. | `LabelResolverTest`, `LabelFixtureTest` over `label-fixtures.tsv` (40+ real-label cases), timing on 200 nodes |
 | `command/EditDistance.kt` | Bounded Levenshtein with early exit. | `LabelResolverTest` |
 | `command/Command.kt`, `CommandGrammar.kt` | `PickNumber(n)` for a bare number after the prefix. | corpus |
 | `overlay/NumberLabeler.kt` | `labelNodes(nodes)` shared by `label(screen)`. | existing tests |
