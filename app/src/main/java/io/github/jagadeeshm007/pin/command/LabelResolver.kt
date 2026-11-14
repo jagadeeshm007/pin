@@ -40,10 +40,6 @@ object LabelResolver {
         return Resolution.None
     }
 
-    /** The single node for [label], or null when none or several match. */
-    fun find(screen: ScreenSnapshot, label: String, editable: Boolean = false): ScreenNode? =
-        (resolve(screen, label, editable) as? Resolution.One)?.node
-
     /** The focused editable field, or the only editable field on screen. */
     fun inputField(screen: ScreenSnapshot): ScreenNode? {
         val fields = screen.nodes.filter { it.has(NodeFlag.EDITABLE) && !it.has(NodeFlag.PASSWORD) }

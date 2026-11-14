@@ -55,7 +55,9 @@
     <string name="listening_heard">Heard: %1$s</string>
     <string name="command_not_a_command">Not a command</string>
     <string name="command_stopped">Stopped</string>
-    <string name="command_no_label">Nothing labelled "%1$s" on screen</string>
+    <string name="command_no_label">Nothing like "%1$s" on screen</string>
+    <string name="command_say_a_number">Say a number</string>
+    <string name="command_no_numbers">No numbers shown</string>
     <string name="command_no_field">No text field to type into</string>
     <string name="command_no_number">Number %1$d is not shown</string>
     <string name="command_numbers_shown">Numbers shown</string>
