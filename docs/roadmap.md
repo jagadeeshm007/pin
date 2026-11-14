@@ -42,7 +42,7 @@ plan, build, verify, review, done.
 | Id | Task | Status |
 | --- | --- | --- |
 | PIN-30 | Command grammar and intent router with early commit | review |
-| PIN-31 | Fuzzy target resolution and numbers fallback | in progress |
+| PIN-31 | Fuzzy target resolution and numbers fallback | review |
 
 ## Phase 4: Agent
 
