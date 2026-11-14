@@ -23,6 +23,7 @@ object CommandGrammar {
         }
         NUMBER.matchEntire(s)?.let { m -> number(m.groupValues[1])?.let { return Command.TapNumber(it) } }
         TAP_DIGITS.matchEntire(s)?.let { m -> return Command.TapNumber(m.groupValues[1].toInt()) }
+        number(s)?.let { return Command.PickNumber(it) }
         LONG_PRESS.matchEntire(s)?.let { return Command.OnLabel(Command.LabelKind.LONG_PRESS, it.groupValues[1]) }
         DOUBLE_TAP.matchEntire(s)?.let { return Command.OnLabel(Command.LabelKind.DOUBLE_TAP, it.groupValues[1]) }
         TAP.matchEntire(s)?.let { return Command.OnLabel(Command.LabelKind.TAP, it.groupValues[1]) }

@@ -41,6 +41,15 @@ class CommandGrammarTest {
     }
 
     @Test
+    fun aBareNumberPicksAShownNumber() {
+        assertEquals(Command.PickNumber(3), CommandGrammar.parse("three"))
+        assertEquals(Command.PickNumber(12), CommandGrammar.parse("12."))
+        assertEquals(Command.TapNumber(7), CommandGrammar.parse("number seven"))
+        assertFalse(CommandGrammar.parse("three")!!.earlyCommit)
+        assertNull(CommandGrammar.parse("three cats"))
+    }
+
+    @Test
     fun normalizeIgnoresCaseAndPunctuation() {
         assertEquals("wi fi", CommandGrammar.normalize("Wi-Fi!"))
         assertEquals("network and internet", CommandGrammar.normalize("  Network and   internet. "))

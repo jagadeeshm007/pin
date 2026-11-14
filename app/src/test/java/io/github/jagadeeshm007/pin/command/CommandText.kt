@@ -43,5 +43,7 @@ fun Command?.canonical(): String = when (this) {
 
     is Command.TapNumber -> "tap number $number"
 
+    is Command.PickNumber -> "pick $number"
+
     Command.Stop -> "stop"
 }

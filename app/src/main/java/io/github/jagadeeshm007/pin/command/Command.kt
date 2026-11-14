@@ -43,6 +43,9 @@ sealed interface Command {
 
     data class TapNumber(val number: Int) : Command
 
+    /** A bare number, answering "Say a number" (spec PIN-31). */
+    data class PickNumber(val number: Int) : Command
+
     /** Stops the running task. */
     data object Stop : Command {
         override val earlyCommit get() = true
