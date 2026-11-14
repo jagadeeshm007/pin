@@ -85,8 +85,11 @@ guess. Detail: `docs/architecture/direction-phase-7.md`.
 | PIN-72 | Data-loss guardrails: a deny list of destructive targets (reset, delete, format, uninstall, factory reset, sign out) that no route may trigger, on top of the confirmation gate | todo |
 | PIN-73 | Visible hand: an overlay cursor that shows tapping, holding, dragging and scrolling before and while Pin acts | todo |
 | PIN-74 | Tool registry: typed, permissioned tools beyond the screen (files and media read and write, contacts, SMS and calls, app intents, share sheets), each a separate runtime permission the user grants | todo |
-| PIN-75 | Safe script runner: the planner composes tools into a small sandboxed script (no arbitrary code, no network, time and step budgets, dry-run shown to the user for anything that writes or sends) | todo |
+| PIN-75 | Safe script runner: an embedded interpreter (JavaScript via QuickJS or Lua, ADR needed) whose only powers are Pin's registry tools; loops and conditions allowed; no network, no file system beyond tool calls, time and step budgets; dry run shown for anything that writes or sends | todo |
 | PIN-76 | User memory: remembered preferences, routines and app habits, stored locally, visible and editable, with the same retention controls as history | todo |
+| PIN-77 | MCP client and connectors: Pin connects to MCP servers the user adds (remote over HTTP, local over the user's own network), lists their tools and resources, and exposes them to the planner through the same registry and permission gates | todo |
+| PIN-78 | Skills: user-added instruction packs (Markdown with optional tool allowlists), loaded per task like other harnesses do, shareable as files, never containing keys | todo |
+| PIN-79 | Deep Android reach: an audit of every API an app may use without root (intents, content providers, companion device, app functions, notifications listener, media projection, roles) and a registry tool for each that passes the privacy review | todo |
 
 ## Phase 8: Google and connectivity (after Phase 7)
 
